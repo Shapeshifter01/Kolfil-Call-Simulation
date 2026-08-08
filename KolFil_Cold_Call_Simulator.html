@@ -1,0 +1,2259 @@
+<!--
+================================================================
+  KolFil Cold Call Simulator & AI Trainer - Beta v1.0
+================================================================
+  Copyright (c) 2026 KolFil LLC
+  All Rights Reserved.
+
+  Built by : Never Ending Learning · 2026
+  Company  : KolFil | Winchester, VA | kolfil.com
+  CEO      : Jan Aurel Esparaguera
+
+  PROPRIETARY & CONFIDENTIAL
+  This simulator - including its QA framework, 40-objection
+  library, coaching logic, persona engine, calendar booking
+  flow, and script architecture - is the intellectual property
+  of KolFil LLC.
+
+  Unauthorized copying, reproduction, or distribution without
+  express written permission is strictly prohibited.
+
+  Licensing: janaurel@kolfil.com | 419-299-4218
+================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KolFil · Cold Call Simulator v5</title>
+<style>
+:root{
+  --bg:#0A0E15;--bg2:#0F1520;--bg3:#162030;--bg4:#1C2A3F;
+  --gold:#F0B429;--gold2:#FFD666;--gold-dim:rgba(240,180,41,0.1);
+  --green:#2ECC71;--green-dim:rgba(46,204,113,0.12);
+  --red:#FF5252;--red-dim:rgba(255,82,82,0.1);
+  --blue:#5BA3FF;--blue-dim:rgba(91,163,255,0.1);
+  --amber:#FFB347;--amber-dim:rgba(255,179,71,0.1);
+  --purple:#A78BFA;--purple-dim:rgba(167,139,250,0.1);
+  --text:#E2EAF4;--text2:#7A8899;--border:#1E2D40;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;overflow:hidden;}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;transition:opacity .3s,transform .3s;}
+.screen.hidden{opacity:0;pointer-events:none;transform:translateY(14px);}
+
+/* ── LOBBY ── */
+#lobby{align-items:center;justify-content:flex-start;padding:16px 16px 40px;overflow-y:auto;}
+.lob{width:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:12px;padding-bottom:20px;}
+.lob-brand{display:flex;align-items:center;gap:12px;padding:6px 0;}
+.kfl{width:44px;height:44px;background:linear-gradient(135deg,var(--gold),#B8860B);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#000;flex-shrink:0;}
+.lob-h{font-size:22px;font-weight:900;color:#fff;letter-spacing:-.5px;}
+.lob-h em{color:var(--gold);font-style:normal;}
+.lob-h span{font-size:12px;color:var(--text2);font-weight:400;display:block;margin-top:1px;}
+/* SESSION STATS */
+.sess-bar{display:flex;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;}
+.sess-item{flex:1;text-align:center;}
+.sess-val{font-size:20px;font-weight:900;color:var(--gold);line-height:1;}
+.sess-lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);margin-top:2px;}
+.sess-item.fire .sess-val{color:var(--red);}
+/* MODE SELECT */
+.mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.mcard{padding:12px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg3);cursor:pointer;transition:all .2s;text-align:center;}
+.mcard:hover,.mcard.on{border-color:var(--gold);background:var(--gold-dim);}
+.mcard-ico{font-size:22px;margin-bottom:4px;}
+.mcard-t{font-size:13px;font-weight:700;color:#fff;}
+.mcard-s{font-size:11px;color:var(--text2);margin-top:2px;}
+/* SELECTORS */
+.sel-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--gold);}
+.vg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.vb{padding:8px 4px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;text-align:center;transition:all .2s;text-transform:uppercase;}
+.vb:hover,.vb.on{border-color:var(--gold);color:var(--gold);background:var(--gold-dim);}
+.diff-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.db{padding:9px 6px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg3);cursor:pointer;transition:all .2s;text-align:center;font-size:11.5px;font-weight:700;color:var(--text2);}
+.db.on.easy{border-color:var(--green);color:var(--green);background:var(--green-dim);}
+.db.on.mid{border-color:var(--amber);color:var(--amber);background:var(--amber-dim);}
+.db.on.hard{border-color:var(--red);color:var(--red);background:var(--red-dim);}
+.go{width:100%;padding:13px;background:var(--gold);color:#000;font-size:15px;font-weight:900;border:none;border-radius:10px;cursor:pointer;transition:all .2s;letter-spacing:.3px;}
+.go:hover{background:var(--gold2);transform:translateY(-1px);}
+.go:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+/* ── RINGING ── */
+#ring{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:999;opacity:0;pointer-events:none;transition:opacity .3s;}
+#ring.show{opacity:1;pointer-events:all;}
+.rav{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#3D7ACC,var(--blue));display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#fff;animation:rp 1.2s infinite;}
+@keyframes rp{0%,100%{box-shadow:0 0 0 0 rgba(91,163,255,.6);}60%{box-shadow:0 0 0 22px rgba(91,163,255,0);}}
+.ring-lbl{font-size:18px;font-weight:800;color:#fff;}
+.ring-sub{font-size:12px;color:var(--text2);}
+.rdots{display:flex;gap:5px;}
+.rd{width:7px;height:7px;border-radius:50%;background:var(--blue);animation:bl 1.1s infinite;}
+.rd:nth-child(2){animation-delay:.2s;}.rd:nth-child(3){animation-delay:.4s;}
+@keyframes bl{0%,80%,100%{opacity:.2;}40%{opacity:1;}}
+
+/* ── CALL SCREEN ── */
+#call{flex-direction:column;}
+.topb{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;gap:8px;}
+.cst{display:flex;align-items:center;gap:6px;}
+.csd{width:8px;height:8px;border-radius:50%;background:var(--text2);transition:all .3s;flex-shrink:0;}
+.csd.live{background:var(--green);animation:pu 1.5s infinite;}
+.csd.gk{background:var(--amber);animation:pu .8s infinite;}
+@keyframes pu{0%,100%{opacity:1;}50%{opacity:.3;}}
+.csl{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);}
+.csl.live{color:var(--green);}
+.csl.gk{color:var(--amber);}
+.ctm{font-size:12.5px;font-weight:700;color:var(--text2);font-family:monospace;}
+.top-right{display:flex;align-items:center;gap:6px;}
+.hint-toggle{padding:5px 10px;background:var(--purple-dim);border:1px solid rgba(167,139,250,.3);color:var(--purple);font-size:11px;font-weight:700;border-radius:6px;cursor:pointer;transition:all .2s;}
+.hint-toggle.on{background:var(--purple);color:#000;}
+.endb{padding:6px 12px;background:var(--red-dim);border:1.5px solid var(--red);color:var(--red);font-size:11px;font-weight:800;border-radius:6px;cursor:pointer;text-transform:uppercase;transition:all .2s;}
+.endb:hover{background:var(--red);color:#fff;}
+
+/* PROSPECT BAR */
+.pb{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--bg3);border-bottom:1px solid var(--border);flex-shrink:0;}
+.pav{width:35px;height:35px;border-radius:50%;background:linear-gradient(135deg,#3D7ACC,var(--blue));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;flex-shrink:0;transition:box-shadow .3s;}
+.pav.sp{box-shadow:0 0 0 3px var(--green),0 0 0 6px rgba(46,204,113,.2);}
+.pav.gk-av{background:linear-gradient(135deg,var(--amber),#B8860B);}
+.pn{font-size:12.5px;font-weight:800;color:#fff;}
+.ps{font-size:10.5px;color:var(--text2);}
+.phs{display:flex;gap:4px;margin-left:auto;}
+.ph{padding:2px 7px;border-radius:20px;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;border:1px solid var(--border);color:var(--text2);transition:all .2s;}
+.ph.act{border-color:var(--gold);color:var(--gold);background:var(--gold-dim);}
+.ph.dn{border-color:var(--green);color:var(--green);}
+
+/* HINT PANEL */
+.hint-panel{display:none;flex-direction:column;gap:4px;padding:8px 14px;background:var(--purple-dim);border-bottom:1px solid rgba(167,139,250,.2);flex-shrink:0;animation:slideDown .2s ease;}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+.hint-panel.show{display:flex;}
+.hint-phase{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--purple);}
+.hint-line{font-size:12px;color:var(--text);font-style:italic;line-height:1.5;}
+.hint-tip{font-size:11px;color:var(--amber);}
+
+/* SPEAKING BAR */
+.speak-bar{display:none;align-items:center;gap:8px;padding:6px 14px;background:var(--green-dim);border-bottom:1px solid rgba(46,204,113,.2);flex-shrink:0;}
+.speak-bar.show{display:flex;}
+.swaves{display:flex;gap:3px;align-items:center;}
+.sw{width:3px;border-radius:2px;background:var(--green);animation:wave 1s infinite ease-in-out;}
+.sw:nth-child(1){height:7px;}.sw:nth-child(2){height:13px;animation-delay:.1s;}.sw:nth-child(3){height:19px;animation-delay:.2s;}.sw:nth-child(4){height:13px;animation-delay:.3s;}.sw:nth-child(5){height:7px;animation-delay:.4s;}
+@keyframes wave{0%,100%{transform:scaleY(.5);}50%{transform:scaleY(1);}}
+.speak-lbl{font-size:11.5px;font-weight:700;color:var(--green);}
+
+/* CHAT */
+.chat{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+.chat::-webkit-scrollbar{width:3px;}
+.chat::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.msg{display:flex;max-width:86%;animation:mi .22s ease;}
+@keyframes mi{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+.msg.pro{align-self:flex-start;}
+.msg.sdr{align-self:flex-end;flex-direction:row-reverse;}
+.msg.sys{align-self:center;max-width:100%;}
+.mi2{display:flex;flex-direction:column;}
+.mw{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:2px;}
+.msg.sdr .mw{text-align:right;}
+.bbl{padding:8px 12px;border-radius:11px;font-size:13.5px;line-height:1.6;}
+.msg.pro .bbl{background:var(--bg3);border:1px solid var(--border);border-bottom-left-radius:3px;}
+.msg.sdr .bbl{background:linear-gradient(135deg,var(--blue),#3D7ACC);color:#fff;border-bottom-right-radius:3px;}
+.msg.sys .bbl{background:var(--amber-dim);border:1px solid rgba(255,179,71,.3);color:var(--amber);font-size:12px;text-align:center;border-radius:8px;}
+.typ{display:flex;align-items:center;gap:4px;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:11px;border-bottom-left-radius:3px;align-self:flex-start;}
+.td{width:5px;height:5px;border-radius:50%;background:var(--text2);animation:bl 1.1s infinite;}
+.td:nth-child(2){animation-delay:.2s;}.td:nth-child(3){animation-delay:.4s;}
+
+/* INPUT AREA */
+.iarea{flex-shrink:0;padding:10px 14px;background:var(--bg2);border-top:1px solid var(--border);}
+/* VOICE MODE */
+.vmode{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.mic-wrap{position:relative;display:flex;align-items:center;justify-content:center;}
+.mic-ring{position:absolute;width:76px;height:76px;border-radius:50%;border:2px solid var(--border);pointer-events:none;transition:all .3s;}
+.mic-ring.lst{border-color:var(--red);animation:mr 1s infinite;}
+.mic-ring.spt{border-color:var(--green);animation:mr 1.5s infinite;}
+@keyframes mr{0%,100%{transform:scale(1);opacity:.6;}50%{transform:scale(1.1);opacity:1;}}
+.micb{width:60px;height:60px;border-radius:50%;border:2px solid var(--border);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:24px;transition:all .25s;}
+.micb:hover{border-color:var(--blue);background:var(--blue-dim);}
+.micb.lst{background:var(--red);border-color:var(--red);}
+.micb.spt{background:var(--green-dim);border-color:var(--green);}
+.micb:disabled{opacity:.3;cursor:not-allowed;}
+.mst{font-size:11px;font-weight:700;color:var(--text2);text-align:center;text-transform:uppercase;letter-spacing:.5px;}
+.ltx{font-size:11px;color:var(--text);font-style:italic;text-align:center;min-height:15px;max-width:360px;}
+.vbot{display:flex;align-items:center;gap:8px;width:100%;}
+.sw2{padding:5px 12px;background:transparent;border:1px solid var(--border);color:var(--text2);font-size:11px;font-weight:700;border-radius:6px;cursor:pointer;transition:all .2s;}
+.sw2:hover{border-color:var(--blue);color:var(--blue);}
+.vh{flex:1;font-size:10.5px;color:var(--text2);text-align:center;}
+/* TEXT MODE */
+.tmode{display:none;flex-direction:column;gap:7px;}
+.tmode.show{display:flex;}
+.irow{display:flex;gap:7px;align-items:flex-end;}
+.tinp{flex:1;background:var(--bg4);border:1.5px solid var(--border);border-radius:9px;padding:10px 13px;color:var(--text);font-size:14px;font-family:inherit;resize:none;min-height:44px;max-height:96px;outline:none;transition:border-color .2s;line-height:1.5;}
+.tinp:focus{border-color:var(--blue);}
+.tinp:disabled{opacity:.4;}
+.tinp::placeholder{color:var(--text2);}
+.snd{padding:10px 18px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;transition:all .2s;}
+.snd:hover{background:#4A92EE;}
+.snd:disabled{opacity:.4;cursor:not-allowed;}
+
+/* ── SCORE SCREEN ── */
+#score{overflow-y:auto;padding:16px 14px;}
+#score::-webkit-scrollbar{width:3px;}
+.sw3{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+.stop{text-align:center;padding:18px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;}
+.sci{width:84px;height:84px;border-radius:50%;border:3px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 10px;}
+.scn{font-size:30px;font-weight:900;line-height:1;}
+.scp{font-size:9.5px;font-weight:700;letter-spacing:1px;color:var(--text2);}
+.sv{font-size:15px;font-weight:800;color:#fff;margin-bottom:3px;}
+.ss{font-size:12px;color:var(--text2);}
+/* NEW BEST */
+.new-best{background:linear-gradient(135deg,#1a1000,#110900);border:1.5px solid var(--gold);border-radius:10px;padding:12px 14px;text-align:center;animation:glow 2s infinite;}
+@keyframes glow{0%,100%{box-shadow:0 0 8px rgba(240,180,41,.3);}50%{box-shadow:0 0 20px rgba(240,180,41,.6);}}
+.nb-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:4px;}
+.nb-txt{font-size:13px;color:var(--text);}
+/* QA */
+.ql{display:flex;flex-direction:column;gap:5px;}
+.qr{background:var(--bg3);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.qr-top{display:flex;align-items:flex-start;gap:8px;padding:8px 12px;}
+.qb{padding:3px 7px;border-radius:20px;font-size:9px;font-weight:800;flex-shrink:0;text-transform:uppercase;min-width:56px;text-align:center;margin-top:2px;}
+.qb.yes,.qb.compliant,.qb.conv{background:rgba(46,204,113,.15);color:var(--green);border:1px solid rgba(46,204,113,.3);}
+.qb.partial,.qb.perm{background:rgba(240,180,41,.15);color:var(--gold);border:1px solid rgba(240,180,41,.3);}
+.qb.no{background:rgba(255,82,82,.15);color:var(--red);border:1px solid rgba(255,82,82,.3);}
+.qb.na{background:rgba(122,136,153,.1);color:var(--text2);border:1px solid rgba(122,136,153,.2);}
+.qb.info{background:rgba(91,163,255,.15);color:var(--blue);border:1px solid rgba(91,163,255,.3);}
+.qt{flex:1;}.qp{font-size:12px;font-weight:700;color:#fff;}.qn{font-size:10.5px;color:var(--text2);margin-top:2px;}
+.coach-inline{background:linear-gradient(135deg,#1a0d00,#110800);border-top:1px solid rgba(255,179,71,.2);padding:9px 12px;display:flex;gap:8px;}
+.coach-body{font-size:11.5px;color:var(--text2);line-height:1.6;}
+.coach-script{background:rgba(255,179,71,.08);border-left:2px solid var(--amber);padding:5px 9px;border-radius:0 6px 6px 0;margin-top:5px;font-size:11.5px;color:var(--text);font-style:italic;line-height:1.6;}
+.coach-tip-line{margin-top:5px;font-size:11px;color:var(--amber);}
+.cb{background:linear-gradient(135deg,#0d1a10,#081008);border:1.5px solid rgba(46,204,113,.3);border-radius:10px;padding:11px 14px;}
+.cl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--green);margin-bottom:4px;}
+.ct{font-size:12.5px;color:var(--text);line-height:1.6;}
+.sn3{text-align:center;font-size:11px;color:var(--text2);padding:6px;background:var(--bg3);border-radius:6px;border:1px solid var(--border);}
+.sas{display:flex;gap:8px;flex-wrap:wrap;}
+.sa{flex:1;min-width:120px;padding:11px;border-radius:10px;font-size:12.5px;font-weight:800;cursor:pointer;text-transform:uppercase;border:none;transition:all .2s;}
+.sa.new{background:var(--gold);color:#000;}
+.sa.new:hover{background:var(--gold2);}
+.sa.retry{background:var(--green-dim);color:var(--green);border:1px solid rgba(46,204,113,.3);}
+.sa.retry:hover{background:var(--green);color:#000;}
+
+/* ── DRILL SCREEN ── */
+#drill{flex-direction:column;align-items:center;justify-content:flex-start;padding:16px;overflow-y:auto;}
+.drill-wrap{width:100%;max-width:520px;display:flex;flex-direction:column;gap:12px;}
+.drill-header{display:flex;align-items:center;justify-content:space-between;}
+.drill-title{font-size:18px;font-weight:900;color:#fff;}
+.drill-close{padding:6px 14px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:12px;font-weight:700;border-radius:6px;cursor:pointer;}
+.drill-progress{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+.dp-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.dp-score{font-size:13px;font-weight:700;color:var(--text);}
+.dp-count{font-size:12px;color:var(--text2);}
+.dp-bar-bg{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;}
+.dp-bar{height:100%;background:var(--green);border-radius:3px;transition:width .4s ease;}
+.drill-obj{background:var(--bg3);border:1.5px solid rgba(255,82,82,.3);border-radius:10px;padding:14px;}
+.drill-obj-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--red);margin-bottom:7px;}
+.drill-obj-txt{font-size:15px;color:#fff;font-weight:600;line-height:1.5;}
+.drill-input-area{display:flex;flex-direction:column;gap:8px;}
+.drill-tinp{background:var(--bg4);border:1.5px solid var(--border);border-radius:9px;padding:11px 13px;color:var(--text);font-size:13.5px;font-family:inherit;resize:none;height:80px;outline:none;transition:border-color .2s;line-height:1.5;width:100%;}
+.drill-tinp:focus{border-color:var(--blue);}
+.drill-tinp:disabled{opacity:.4;}
+.drill-submit{width:100%;padding:12px;background:var(--blue);color:#fff;font-size:14px;font-weight:800;border:none;border-radius:9px;cursor:pointer;}
+.drill-submit:hover{background:#4A92EE;}
+.drill-submit:disabled{opacity:.4;cursor:not-allowed;}
+.drill-result{border-radius:10px;overflow:hidden;display:none;}
+.drill-result.show{display:block;}
+.dr-top{padding:12px 14px;display:flex;align-items:center;gap:10px;}
+.dr-ico{font-size:24px;}
+.dr-verdict{font-size:14px;font-weight:800;}
+.dr-perfect-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--amber);padding:0 14px;margin-top:0;}
+.dr-perfect{background:rgba(255,179,71,.08);border-left:3px solid var(--amber);margin:0 14px 14px;padding:10px 12px;font-size:12.5px;color:var(--text);font-style:italic;border-radius:0 8px 8px 0;line-height:1.6;}
+.drill-next{width:100%;padding:12px;font-size:14px;font-weight:800;border:none;border-radius:9px;cursor:pointer;transition:all .2s;}
+.drill-next.correct{background:var(--green);color:#000;}
+.drill-next.partial{background:var(--gold);color:#000;}
+.drill-next.wrong{background:var(--red);color:#fff;}
+.drill-done{text-align:center;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:20px;display:none;}
+.drill-done.show{display:block;}
+.dd-score{font-size:42px;font-weight:900;color:var(--gold);line-height:1;}
+.dd-lbl{font-size:13px;color:var(--text2);margin-top:4px;}
+.dd-back{margin-top:14px;padding:12px 24px;background:var(--gold);color:#000;font-weight:800;border:none;border-radius:9px;cursor:pointer;font-size:14px;}
+/* NAME INPUT */
+.name-wrap{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+.name-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:7px;}
+.name-inp{width:100%;background:var(--bg4);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;}
+.name-inp:focus{border-color:var(--gold);}
+.name-inp::placeholder{color:var(--text2);}
+.name-greeting{font-size:12px;color:var(--green);margin-top:6px;min-height:16px;font-weight:600;}
+/* SHAREABLE SCORE CARD */
+.share-card{background:linear-gradient(135deg,#0d1a10,#081008);border:2px solid var(--gold);border-radius:14px;padding:18px;text-align:center;}
+.sc-kolfil{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:3px;color:var(--gold);margin-bottom:8px;}
+.sc-name{font-size:22px;font-weight:900;color:#fff;margin-bottom:3px;}
+.sc-title{font-size:11px;color:var(--text2);margin-bottom:14px;}
+.sc-big{font-size:52px;font-weight:900;line-height:1;margin-bottom:4px;}
+.sc-label{font-size:12px;color:var(--text2);margin-bottom:12px;}
+.sc-verdict{font-size:14px;font-weight:800;margin-bottom:12px;}
+.sc-meta{display:flex;justify-content:center;gap:16px;margin-bottom:10px;}
+.sc-meta-item{text-align:center;}
+.sc-meta-val{font-size:16px;font-weight:900;color:var(--gold);}
+.sc-meta-lbl{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;}
+.sc-date{font-size:10px;color:var(--text2);margin-top:6px;}
+.sc-url{font-size:10px;color:var(--blue);margin-top:3px;}
+
+/* LEAD CARD */
+#leadcard{align-items:center;justify-content:center;padding:16px;overflow-y:auto;}
+.lc-wrap{width:100%;max-width:560px;display:flex;flex-direction:column;gap:12px;}
+.lc-topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;}
+.lc-orum{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--amber);}
+.lc-diff{font-size:11px;color:var(--text2);}
+.lc-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.lc-card-hdr{padding:14px 16px;background:var(--bg4);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+.lc-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#3D7ACC,var(--blue));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#fff;flex-shrink:0;}
+.lc-name{font-size:15px;font-weight:800;color:#fff;}
+.lc-title-co{font-size:12px;color:var(--text2);}
+.lc-fields{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.lc-field{padding:10px 16px;border-bottom:1px solid var(--border);}
+.lc-field:nth-child(odd){border-right:1px solid var(--border);}
+.lc-flbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);margin-bottom:3px;}
+.lc-fval{font-size:13px;color:var(--text);font-weight:500;}
+.lc-desc{padding:12px 16px;background:var(--bg4);border-top:1px solid var(--border);}
+.lc-desc-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:4px;}
+.lc-desc-txt{font-size:12.5px;color:var(--text2);line-height:1.6;}
+.dial-btn{width:100%;padding:15px;background:var(--green);color:#000;font-size:16px;font-weight:900;border:none;border-radius:10px;cursor:pointer;transition:all .2s;animation:dialPulse 2s infinite;}
+@keyframes dialPulse{0%,100%{box-shadow:0 0 0 0 rgba(46,204,113,.5);}60%{box-shadow:0 0 0 12px rgba(46,204,113,0);}}
+.dial-btn:hover{background:#25b863;transform:translateY(-1px);}
+
+/* CALENDAR MODAL */
+.cal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .3s;}
+.cal-overlay.show{opacity:1;pointer-events:all;}
+.cal-box{background:var(--bg2);border:1.5px solid rgba(91,163,255,.3);border-radius:14px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto;}
+.cal-box::-webkit-scrollbar{width:3px;}
+.cal-box::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.cal-hdr{padding:14px 16px;border-bottom:1px solid var(--border);text-align:center;}
+.cal-brand{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--blue);margin-bottom:4px;}
+.cal-meeting-title{font-size:15px;font-weight:800;color:#fff;margin-bottom:2px;}
+.cal-meeting-sub{font-size:12px;color:var(--text2);}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);}
+.cal-nav-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;}
+.cal-nav-btn:hover{border-color:var(--blue);color:var(--blue);}
+.cal-month{font-size:14px;font-weight:700;color:#fff;}
+.cal-days-hdr{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:8px 12px 4px;}
+.cal-day-name{text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text2);padding:4px 0;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:4px 12px 12px;}
+.cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;border:1.5px solid transparent;}
+.cal-day.empty{pointer-events:none;}
+.cal-day.past{color:var(--bg4);pointer-events:none;}
+.cal-day.today{border-color:var(--blue);color:var(--blue);}
+.cal-day.available:hover{background:var(--blue-dim);border-color:var(--blue);color:var(--blue);}
+.cal-day.selected{background:var(--blue);color:#fff;border-color:var(--blue);}
+.cal-day.weekend{color:var(--text2);opacity:.4;pointer-events:none;}
+.cal-slots-wrap{padding:12px 16px;border-top:1px solid var(--border);}
+.cal-slots-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--blue);margin-bottom:8px;}
+.cal-slots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.cal-slot{padding:8px 4px;background:var(--bg3);border:1.5px solid var(--border);border-radius:7px;text-align:center;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--text);transition:all .2s;}
+.cal-slot:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-dim);}
+.cal-slot.selected{background:var(--blue);color:#fff;border-color:var(--blue);}
+.cal-confirm-wrap{padding:14px 16px;border-top:1px solid var(--border);}
+.cal-confirm-title{font-size:13px;font-weight:800;color:#fff;margin-bottom:12px;}
+.cal-confirm-detail{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;}
+.cal-confirm-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-bottom:4px;}
+.cal-confirm-row:last-child{margin-bottom:0;}
+.cal-input-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);margin-bottom:5px;}
+.cal-input{width:100%;background:var(--bg4);border:1.5px solid var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13.5px;font-family:inherit;outline:none;margin-bottom:10px;}
+.cal-input:focus{border-color:var(--blue);}
+.cal-send-btn{width:100%;padding:12px;background:var(--blue);color:#fff;font-size:14px;font-weight:800;border:none;border-radius:9px;cursor:pointer;transition:all .2s;}
+.cal-send-btn:hover{background:#4A92EE;}
+.cal-success{text-align:center;padding:20px 16px;border-top:1px solid var(--border);}
+.cal-success-ico{font-size:42px;margin-bottom:8px;}
+.cal-success-title{font-size:16px;font-weight:800;color:var(--green);margin-bottom:4px;}
+.cal-success-sub{font-size:12.5px;color:var(--text2);margin-bottom:14px;line-height:1.5;}
+.cal-close-btn{padding:10px 24px;background:var(--green);color:#000;font-weight:800;border:none;border-radius:8px;cursor:pointer;font-size:13px;}
+
+/* BOOK BUTTON during call */
+.book-trigger{display:none;margin:4px 0;align-self:flex-start;}
+.book-trigger.show{display:flex;}
+.book-trigger-btn{display:flex;align-items:center;gap:8px;padding:11px 18px;background:linear-gradient(135deg,#0d1a10,#081008);border:2px solid rgba(46,204,113,.6);border-radius:10px;cursor:pointer;transition:all .2s;font-size:14px;font-weight:800;color:var(--green);animation:bookPulse 1.5s infinite;width:100%;}
+@keyframes bookPulse{0%,100%{box-shadow:0 0 0 0 rgba(46,204,113,.4);}60%{box-shadow:0 0 0 8px rgba(46,204,113,0);}}
+.book-trigger-btn:hover{background:var(--green);color:#000;border-color:var(--green);}
+.book-trigger-btn.used{background:var(--green);color:#000;border-color:var(--green);cursor:default;animation:none;}
+
+/* LEAD CHEAT SHEET in call */
+.lead-sheet{display:none;flex-shrink:0;background:linear-gradient(135deg,#0d1520,#0a1018);border-bottom:1px solid rgba(91,163,255,.2);padding:8px 14px;}
+.lead-sheet.show{display:block;}
+.ls-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
+.ls-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--blue);}
+.ls-arrow{font-size:11px;color:var(--text2);transition:transform .2s;}
+.ls-arrow.open{transform:rotate(180deg);}
+.ls-body{display:none;margin-top:8px;}
+.ls-body.open{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.ls-item{background:var(--bg4);border:1px solid var(--border);border-radius:7px;padding:7px 10px;}
+.ls-ilbl{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:2px;}
+.ls-ival{font-size:12px;color:var(--text);font-weight:500;word-break:break-all;}
+.ls-pain{grid-column:1/-1;background:rgba(240,180,41,.06);border-color:rgba(240,180,41,.2);}
+.ls-pain .ls-ival{font-size:11.5px;color:var(--gold);font-style:italic;}
+
+.wm{position:fixed;bottom:6px;left:50%;transform:translateX(-50%);
+font-size:9px;color:rgba(122,136,153,.25);pointer-events:none;
+z-index:1;white-space:nowrap;letter-spacing:.5px;user-select:none;}
+
+.terms-ov{position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:9999;
+display:flex;align-items:center;justify-content:center;padding:16px;}
+.terms-box{background:var(--bg2);border:2px solid var(--gold);border-radius:14px;
+width:100%;max-width:460px;overflow:hidden;max-height:90vh;overflow-y:auto;}
+.terms-box::-webkit-scrollbar{width:3px;}
+.terms-box::-webkit-scrollbar-thumb{background:var(--border);}
+.t-hdr{padding:18px 20px 12px;text-align:center;border-bottom:1px solid var(--border);}
+.t-logo{width:46px;height:46px;background:linear-gradient(135deg,var(--gold),#B8860B);
+border-radius:10px;display:flex;align-items:center;justify-content:center;
+font-size:17px;font-weight:900;color:#000;margin:0 auto 8px;}
+.t-title{font-size:16px;font-weight:900;color:#fff;margin-bottom:2px;}
+.t-sub{font-size:11px;color:var(--gold);}
+.t-steps{display:flex;gap:6px;margin-top:12px;justify-content:center;}
+.t-step{background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+padding:8px 10px;text-align:center;flex:1;min-width:90px;}
+.t-sn{font-size:17px;font-weight:900;color:var(--gold);line-height:1;}
+.t-st{font-size:9px;color:var(--text2);margin-top:2px;line-height:1.3;}
+.t-body{padding:14px 18px;}
+.t-item{display:flex;gap:9px;margin-bottom:10px;font-size:12.5px;
+color:var(--text2);line-height:1.5;}
+.t-foot{padding:12px 18px;border-top:1px solid var(--border);}
+.t-btn{width:100%;padding:12px;background:var(--gold);color:#000;
+font-size:14px;font-weight:900;border:none;border-radius:9px;cursor:pointer;}
+.t-btn:hover{background:var(--gold2);}
+.t-copy{font-size:9.5px;color:var(--text2);text-align:center;margin-top:8px;}
+
+/* DRILL HINT SYSTEM */
+.drill-hint-btn{width:100%;padding:9px;background:var(--purple-dim);border:1.5px solid rgba(167,139,250,.3);color:var(--purple);font-size:13px;font-weight:700;border-radius:9px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.drill-hint-btn:hover{background:var(--purple);color:#fff;}
+.drill-hint-btn.used{background:rgba(167,139,250,.05);border-color:rgba(167,139,250,.15);color:rgba(167,139,250,.4);cursor:not-allowed;}
+.drill-hint-panel{display:none;background:linear-gradient(135deg,#120d1a,#0d0814);border:1.5px solid rgba(167,139,250,.3);border-radius:10px;padding:13px 15px;animation:slideDown .2s ease;}
+.drill-hint-panel.show{display:block;}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+.dh-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--purple);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+.dh-warning{font-size:10px;color:var(--red);font-weight:700;}
+.dh-pillar{display:flex;gap:9px;margin-bottom:7px;font-size:12.5px;color:var(--text);line-height:1.5;}
+.dh-num{width:20px;height:20px;border-radius:50%;background:var(--purple);color:#fff;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.dh-pillar strong{color:var(--purple);}
+.dh-example{font-size:11px;color:var(--text2);font-style:italic;margin-top:2px;}
+.cheater-badge{display:inline-flex;align-items:center;gap:5px;background:var(--red-dim);border:1px solid rgba(255,82,82,.3);color:var(--red);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;margin-left:8px;}
+
+/* FEEDBACK SYSTEM */
+.fb-float{position:fixed;bottom:20px;right:20px;z-index:800;}
+.fb-btn{width:52px;height:52px;border-radius:50%;background:var(--blue);border:none;
+color:#fff;font-size:22px;cursor:pointer;box-shadow:0 4px 15px rgba(91,163,255,.4);
+transition:all .2s;display:flex;align-items:center;justify-content:center;}
+.fb-btn:hover{transform:scale(1.1);background:#4A92EE;}
+.fb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:801;
+display:none;align-items:center;justify-content:center;padding:16px;}
+.fb-overlay.show{display:flex;}
+.fb-box{background:var(--bg2);border:1.5px solid rgba(91,163,255,.3);border-radius:14px;
+width:100%;max-width:420px;overflow:hidden;}
+.fb-hdr{padding:16px 18px;border-bottom:1px solid var(--border);text-align:center;}
+.fb-title{font-size:16px;font-weight:900;color:#fff;margin-bottom:2px;}
+.fb-sub{font-size:11px;color:var(--text2);}
+.fb-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px;}
+.fb-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);margin-bottom:5px;}
+.fb-stars{display:flex;gap:8px;justify-content:center;}
+.fb-star{font-size:28px;cursor:pointer;transition:transform .15s;filter:grayscale(1);opacity:.4;}
+.fb-star.on{filter:none;opacity:1;transform:scale(1.1);}
+.fb-star:hover{filter:none;opacity:1;}
+.fb-inp{width:100%;background:var(--bg4);border:1.5px solid var(--border);border-radius:9px;
+padding:10px 13px;color:var(--text);font-size:13px;font-family:inherit;outline:none;resize:none;height:80px;line-height:1.5;}
+.fb-inp:focus{border-color:var(--blue);}
+.fb-inp::placeholder{color:var(--text2);}
+.fb-name{width:100%;background:var(--bg4);border:1.5px solid var(--border);border-radius:9px;
+padding:10px 13px;color:var(--text);font-size:13px;font-family:inherit;outline:none;}
+.fb-name:focus{border-color:var(--blue);}
+.fb-name::placeholder{color:var(--text2);}
+.fb-submit{width:100%;padding:12px;background:var(--blue);color:#fff;font-size:14px;
+font-weight:800;border:none;border-radius:9px;cursor:pointer;transition:all .2s;}
+.fb-submit:hover{background:#4A92EE;}
+.fb-cancel{width:100%;padding:10px;background:transparent;color:var(--text2);font-size:13px;
+border:1px solid var(--border);border-radius:9px;cursor:pointer;margin-top:4px;}
+.fb-cancel:hover{border-color:var(--blue);color:var(--blue);}
+.fb-success{text-align:center;padding:30px 18px;}
+.fb-success-ico{font-size:42px;margin-bottom:10px;}
+.fb-success-title{font-size:16px;font-weight:800;color:var(--green);margin-bottom:4px;}
+.fb-success-sub{font-size:12px;color:var(--text2);margin-bottom:16px;}
+.fb-done-btn{padding:10px 24px;background:var(--green);color:#000;font-weight:800;border:none;border-radius:8px;cursor:pointer;font-size:13px;}
+</style>
+</head>
+<body>
+
+<!-- RINGING -->
+<div id="ring">
+  <div class="rav" id="rav">?</div>
+  <div class="ring-lbl" id="ringLbl">Connecting...</div>
+  <div class="ring-sub" id="ringSub">Ringing...</div>
+  <div class="rdots"><div class="rd"></div><div class="rd"></div><div class="rd"></div></div>
+</div>
+
+<!-- ══ LOBBY ══ -->
+<div class="screen" id="lobby">
+<div class="lob">
+  <div class="lob-brand">
+    <div class="kfl">KF</div>
+    <div>
+      <div class="lob-h">Cold Call <em>Simulator</em> <span>& AI Trainer · v5</span></div>
+    </div>
+  </div>
+  <!-- SESSION STATS -->
+  <div class="sess-bar" id="sessBar">
+    <div class="sess-item"><div class="sess-val" id="ssCalls">0</div><div class="sess-lbl">Calls</div></div>
+    <div class="sess-item"><div class="sess-val" id="ssBest">—</div><div class="sess-lbl">Best Score</div></div>
+    <div class="sess-item fire"><div class="sess-val" id="ssStreak">0🔥</div><div class="sess-lbl">Streak &gt;70</div></div>
+    <div class="sess-item"><div class="sess-val" id="ssDrills">0</div><div class="sess-lbl">Drills Done</div></div>
+  </div>
+  <!-- MODE -->
+
+  <div class="sel-lbl">Mode</div>
+  <div class="mode-row">
+    <div class="mcard on" id="mFull" onclick="setMode('full',this)">
+      <div class="mcard-ico">📞</div>
+      <div class="mcard-t">Full Simulation</div>
+      <div class="mcard-s">Complete call flow · QA scored</div>
+    </div>
+    <div class="mcard" id="mDrill" onclick="setMode('drill',this)">
+      <div class="mcard-ico">⚡</div>
+      <div class="mcard-t">Objection Drills</div>
+      <div class="mcard-s">40 objections · Voice enabled</div>
+    </div>
+  </div>
+  <!-- VERTICAL + DIFF (only for full sim) -->
+  <div id="simOptions">
+    <div class="sel-lbl" style="margin-bottom:6px;">Vertical</div>
+    <div class="vg">
+      <button class="vb on" onclick="setV('random',this)">🎲 Random</button>
+      <button class="vb" onclick="setV('tech',this)">💻 Tech/SaaS</button>
+      <button class="vb" onclick="setV('staffing',this)">👥 Staffing</button>
+      <button class="vb" onclick="setV('industrial',this)">⚙️ Industrial</button>
+    </div>
+    <div class="sel-lbl" style="margin:10px 0 6px;">Prospect Difficulty</div>
+    <div class="diff-row">
+      <button class="db on easy" onclick="setD('easy',this)">😊 Warm<br><span style="font-size:10px;font-weight:400;">Build confidence</span></button>
+      <button class="db mid" onclick="setD('mid',this)">😐 Realistic<br><span style="font-size:10px;font-weight:400;">Daily training</span></button>
+      <button class="db hard" onclick="setD('hard',this)">😤 Tough<br><span style="font-size:10px;font-weight:400;">Advanced · GK included</span></button>
+    </div>
+  </div>
+  <button class="go" id="goBtn" onclick="goStart()">📞 START CALL</button>
+</div>
+</div>
+
+<!-- ══ CALL SCREEN ══ -->
+
+<!-- LEAD CARD SCREEN -->
+<div class="screen hidden" id="leadcard">
+<div class="lc-wrap">
+  <div class="lc-topbar">
+    <div class="lc-orum">⚙️ ORUM — Lead Preview</div>
+    <div class="lc-diff" id="lcDiff">Warm Mode</div>
+  </div>
+  <div class="lc-card">
+    <div class="lc-card-hdr">
+      <div class="lc-avatar" id="lcAvatar">?</div>
+      <div>
+        <div class="lc-name" id="lcName">—</div>
+        <div class="lc-title-co" id="lcTitleCo">—</div>
+      </div>
+    </div>
+    <div class="lc-fields">
+      <div class="lc-field"><div class="lc-flbl">📧 Email</div><div class="lc-fval" id="lcEmail">—</div></div>
+      <div class="lc-field"><div class="lc-flbl">📞 Phone</div><div class="lc-fval" id="lcPhone">—</div></div>
+      <div class="lc-field"><div class="lc-flbl">🌐 Website</div><div class="lc-fval" id="lcWebsite">—</div></div>
+      <div class="lc-field"><div class="lc-flbl">💰 Revenue</div><div class="lc-fval" id="lcRevenue">—</div></div>
+      <div class="lc-field"><div class="lc-flbl">👥 Staff Count</div><div class="lc-fval" id="lcStaff">—</div></div>
+      <div class="lc-field"><div class="lc-flbl">📊 Vertical</div><div class="lc-fval" id="lcVertical">—</div></div>
+      <div class="lc-field" style="grid-column:1/-1;border-right:none;"><div class="lc-flbl">💼 Personal LinkedIn</div><div class="lc-fval" id="lcLinkedIn" style="font-size:12px;color:var(--blue);">—</div></div>
+    </div>
+    <div class="lc-desc">
+      <div class="lc-desc-lbl">Company Description</div>
+      <div class="lc-desc-txt" id="lcDesc">—</div>
+    </div>
+  </div>
+  <div style="font-size:12px;color:var(--text2);text-align:center;padding:4px 0;">📋 Review the lead card before dialing · Know their pain point</div>
+  <button class="dial-btn" onclick="startDialing()">📞 DIAL NOW — <span id="lcNameBtn">Prospect</span></button>
+</div>
+</div>
+
+<!-- CALENDAR MODAL -->
+<div class="cal-overlay" id="calOverlay" onclick="if(event.target===this)closeCalendar()">
+<div class="cal-box">
+  <div class="cal-hdr" style="position:relative;">
+    <button onclick="closeCalendar()" style="position:absolute;top:10px;right:12px;background:var(--red-dim);border:1px solid rgba(255,82,82,.3);color:var(--red);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;line-height:1;">✕</button>
+    <div class="cal-brand">📅 KolFil · Jan Aurel Esparaguera</div>
+    <div class="cal-meeting-title">15-Minute Synergy and Strategy Call</div>
+    <div class="cal-meeting-sub">cal.com/kolfil/onemeetingaday · <span style="color:var(--red);font-size:10px;">Click ✕ to cancel</span></div>
+  </div>
+  <div class="cal-nav">
+    <button class="cal-nav-btn" onclick="calPrevMonth()">←</button>
+    <div class="cal-month" id="calMonthTitle">August 2026</div>
+    <button class="cal-nav-btn" onclick="calNextMonth()">→</button>
+  </div>
+  <div class="cal-days-hdr">
+    <div class="cal-day-name">Sun</div><div class="cal-day-name">Mon</div><div class="cal-day-name">Tue</div>
+    <div class="cal-day-name">Wed</div><div class="cal-day-name">Thu</div><div class="cal-day-name">Fri</div><div class="cal-day-name">Sat</div>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+  <div class="cal-slots-wrap" id="calSlotsWrap" style="display:none;">
+    <div class="cal-slots-title" id="calSlotsTitle">Available times</div>
+    <div class="cal-slots-grid" id="calSlotsGrid"></div>
+  </div>
+  <div class="cal-confirm-wrap" id="calConfirmWrap" style="display:none;">
+    <div class="cal-confirm-title">✅ Confirm your booking details</div>
+    <div class="cal-confirm-detail">
+      <div class="cal-confirm-row">📅 <span id="confDate">—</span></div>
+      <div class="cal-confirm-row">⏰ <span id="confTime">—</span></div>
+      <div class="cal-confirm-row">📍 Google Meet (link in invite)</div>
+      <div class="cal-confirm-row">⏱ 15 minutes</div>
+    </div>
+    <div class="cal-input-lbl">Your Name</div>
+    <input class="cal-input" id="confName" type="text" placeholder="Full name"/>
+    <div class="cal-input-lbl">Email Address *</div>
+    <input class="cal-input" id="confEmail" type="email" placeholder="Enter email for calendar invite"/>
+    <div class="cal-input-lbl">Company</div>
+    <input class="cal-input" id="confCompany" type="text" placeholder="Company name"/>
+    <button class="cal-send-btn" onclick="sendCalInvite()">📩 Send Calendar Invite →</button>
+  </div>
+  <div class="cal-success" id="calSuccess" style="display:none;">
+    <div class="cal-success-ico">🎉</div>
+    <div class="cal-success-title">Invite Sent!</div>
+    <div class="cal-success-sub" id="calSuccessMsg">Calendar invite sent successfully.</div>
+    <button class="cal-close-btn" onclick="closeCalendar()">Back to Call →</button>
+  </div>
+</div>
+</div>
+
+<div class="screen hidden" id="call">
+  <div class="topb">
+    <div class="cst">
+      <div class="csd" id="csd"></div>
+      <div class="csl" id="csl">RINGING</div>
+    </div>
+    <div class="ctm" id="ctm">00:00</div>
+    <div class="top-right">
+      <button class="hint-toggle" id="hintBtn" onclick="togHint()">💡 Hint</button>
+      <button class="endb" onclick="endCall()">⏹ END</button>
+    </div>
+  </div>
+  <div class="pb">
+    <div class="pav" id="pav">?</div>
+    <div><div class="pn" id="pn">—</div><div class="ps" id="ps">—</div></div>
+    <div class="phs">
+      <div class="ph" id="p0">Open</div>
+      <div class="ph" id="p1">Verify</div>
+      <div class="ph" id="p2">Value</div>
+      <div class="ph" id="p3">Object</div>
+      <div class="ph" id="p4">Close</div>
+    </div>
+  </div>
+  <!-- HINT PANEL -->
+  <!-- LEAD CHEAT SHEET -->
+  <div class="lead-sheet" id="leadSheet">
+    <div class="ls-toggle" onclick="togLeadSheet()">
+      <div class="ls-label">📋 Lead Info — <span id="lsNameTag">—</span></div>
+      <div class="ls-arrow" id="lsArrow">▼</div>
+    </div>
+    <div class="ls-body" id="lsBody">
+      <div class="ls-item"><div class="ls-ilbl">📧 Email</div><div class="ls-ival" id="lsEmail">—</div></div>
+      <div class="ls-item"><div class="ls-ilbl">📞 Phone</div><div class="ls-ival" id="lsPhone">—</div></div>
+      <div class="ls-item"><div class="ls-ilbl">🌐 Website</div><div class="ls-ival" id="lsWebsite">—</div></div>
+      <div class="ls-item"><div class="ls-ilbl">💰 Revenue</div><div class="ls-ival" id="lsRevenue">—</div></div>
+      <div class="ls-item"><div class="ls-ilbl">👥 Staff</div><div class="ls-ival" id="lsStaff">—</div></div>
+      <div class="ls-item"><div class="ls-ilbl">📊 Vertical</div><div class="ls-ival" id="lsVertical">—</div></div>
+      <div class="ls-item ls-pain"><div class="ls-ilbl">⚡ Key Pain Point</div><div class="ls-ival" id="lsPain">—</div></div>
+    </div>
+  </div>
+  <div class="hint-panel" id="hintPanel">
+    <div class="hint-phase" id="hintPhase">Opening Phase</div>
+    <div class="hint-line" id="hintLine">—</div>
+    <div class="hint-tip" id="hintTip">—</div>
+  </div>
+  <div class="speak-bar" id="speakBar">
+    <div class="swaves"><div class="sw"></div><div class="sw"></div><div class="sw"></div><div class="sw"></div><div class="sw"></div></div>
+    <div class="speak-lbl" id="speakLbl">Speaking...</div>
+  </div>
+  <div class="chat" id="chat"></div>
+  <div class="book-trigger" id="bookTrigger">
+    <button class="book-trigger-btn" id="bookTriggerBtn" onclick="openCalendar()">
+      📅 Prospect agreed! Book the meeting now →
+    </button>
+  </div>
+  <div class="iarea">
+    <!-- VOICE -->
+    <div class="vmode" id="vmUI">
+      <div class="mic-wrap">
+        <div class="mic-ring" id="mring"></div>
+        <button class="micb" id="micb" onclick="togMic()">🎤</button>
+      </div>
+      <div class="mst" id="mst">Tap to speak</div>
+      <div class="ltx" id="ltx"> </div>
+      <div class="vbot">
+        <button class="sw2" onclick="setInput('text');applyInput()">⌨️ Text</button>
+        <div class="vh">Tap 🎤 → speak → tap ⏹ when done</div>
+      </div>
+    </div>
+    <!-- TEXT -->
+    
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCORE SCREEN ══ -->
+<div class="screen hidden" id="score">
+<div class="sw3">
+  <div class="share-card" id="shareCard">
+    <div class="sc-kolfil">🏢 KolFil · Cold Call Simulator</div>
+    <div class="sc-name" id="scName">SDR</div>
+    <div class="sc-title" id="scTitle">Cold Call QA Score</div>
+    <div class="sc-big" id="scn">—</div>
+    <div class="sc-label">out of 100</div>
+    <div class="sc-verdict" id="sv">—</div>
+    <div class="sc-meta">
+      <div class="sc-meta-item"><div class="sc-meta-val" id="scCalls">—</div><div class="sc-meta-lbl">Call #</div></div>
+      <div class="sc-meta-item"><div class="sc-meta-val" id="scDiff">—</div><div class="sc-meta-lbl">Difficulty</div></div>
+      <div class="sc-meta-item"><div class="sc-meta-val" id="scStreak">—</div><div class="sc-meta-lbl">Streak</div></div>
+    </div>
+    <div class="sc-date" id="scDate">—</div>
+    <div class="sc-url">shapeshifter01.github.io/Kolfil-Call-Simulation</div>
+  </div>
+  <div style="display:none;"><div class="sci" id="sci"><div></div></div><div id="ss"></div></div>
+  <div id="newBestDiv" style="display:none;" class="new-best">
+    <div class="nb-lbl">🏆 New Personal Best!</div>
+    <div class="nb-txt" id="nbTxt">—</div>
+  </div>
+  <div class="ql" id="ql"></div>
+  <div class="cb"><div class="cl">📋 Overall Summary</div><div class="ct" id="ctt">—</div></div>
+  <div class="sn3">📸 Screenshot your score card and share it in Slack — disappears on new call</div>
+  <div class="sas">
+    <button class="sa retry" onclick="retryCall()">🔄 Retry Same Prospect</button>
+    <button class="sa new" onclick="newCall()">📞 New Call</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ DRILL SCREEN ══ -->
+<div class="screen hidden" id="drill">
+<div class="drill-wrap">
+  <div class="drill-header">
+    <div class="drill-title">⚡ Objection Drills</div>
+    <button class="drill-close" onclick="exitDrill()">← Back</button>
+  </div>
+  <div class="drill-progress">
+    <div class="dp-row">
+      <div class="dp-score" id="dpScore">Score: 0 / 0</div>
+      <div class="dp-count" id="dpCount">Drill 1 of 8</div>
+    </div>
+    <div class="dp-bar-bg"><div class="dp-bar" id="dpBar" style="width:0%"></div></div>
+  </div>
+  <div class="drill-obj">
+    <div class="drill-obj-lbl">Prospect says:</div>
+    <div class="drill-obj-txt" id="drillObjTxt">—</div>
+  </div>
+  <!-- VOICE/TEXT TOGGLE FOR DRILLS -->
+  <div style="display:flex;gap:8px;margin-bottom:0;">
+    
+    </div>
+  <!-- DRILL HINT BUTTON -->
+  <button class="drill-hint-btn" id="drillHintBtn" onclick="togDrillHint()">
+    💡 Show Answer — Cheater Tax Applies 😏
+  </button>
+  <div class="drill-hint-panel" id="drillHintPanel">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <span style="font-size:10px;font-weight:700;color:var(--red);">⚠️ CHEATER TAX ACTIVE — Max score: Good</span>
+    </div>
+    <div id="drillHintSpecific">
+      <div style="font-size:11px;color:var(--text2);font-style:italic;">Loading...</div>
+    </div>
+  </div>
+  <!-- VOICE INPUT FOR DRILLS -->
+  <div id="drillVoiceUI" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;">
+    <button class="micb" id="drillMicBtn" onclick="togDrillMic()" style="width:56px;height:56px;font-size:22px;">🎤</button>
+    <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;" id="drillMicSt">Tap mic to respond</div>
+    <div style="font-size:11px;color:var(--text);font-style:italic;min-height:15px;text-align:center;" id="drillLtx"> </div>
+  </div>
+  <!-- TEXT INPUT FOR DRILLS -->
+  
+  <div class="drill-result" id="drillResult">
+    <div class="dr-top" id="drTop"></div>
+    <div class="dr-perfect-lbl">KolFil Perfect Response:</div>
+    <div class="dr-perfect" id="drPerfect">—</div>
+    <div style="padding:0 14px 14px;">
+      <button class="drill-next" id="drillNext" onclick="nextDrill()">Next Objection →</button>
+    </div>
+  </div>
+  <div class="drill-done" id="drillDone">
+    <div class="dd-score" id="ddScore">—</div>
+    <div class="dd-lbl" id="ddLbl">—</div>
+    <button class="dd-back" onclick="exitDrill()">← Back to Lobby</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ══════════════════════════════
+// DATA
+// ══════════════════════════════
+
+// SESSION
+let session={calls:0,best:0,streak:0,drills:0};
+// SDR NAME
+let sdrName='KolFil SDR';
+function onNameInput(){}
+
+// SETTINGS
+let vert='random',diff='easy',inputMode='voice',lobbyMode='full';
+
+// CALL STATE
+let persona=null,hist=[],allSDR=[],msgCount=0,callActive=false,isSpeaking=false;
+let secs=0,timInt=null;
+let convState={phase:'greeting',gkPhase:false,gkFailed:0,objDone:false,objHandled:false,booked:false,ended:false};
+let pendingTx='',isListen=false;
+let retryPersona=null;
+
+// VOICE
+const synth=window.speechSynthesis;
+let recog=null,vMale=null,vFemale=null;
+
+// HINTS
+const HINTS={
+  greeting:{phase:'📞 Opening Phase',line:'"Hi, is this [Name]? Hi [name]. It\'s [YOUR NAME]. I hope I didn\'t catch you at the bad time — I actually came across [company name]. May I share why I\'m calling? I promise to be quick — about 27 seconds. Fair?"',tip:'💡 HARD STOP after "Fair?" — wait for their go-signal. Smile.'},
+  opener_good:{phase:'📞 Opening Phase',line:'"I\'m calling from a company named KOLFIL." [Control your pace — don\'t rush]',tip:'💡 Let them respond first. Acknowledge warmly before your pitch.'},
+  opener_bad:{phase:'📞 Opening Phase',line:'[Opener was missed — try: "I hope I didn\'t catch you at a bad time — may I share why I\'m calling? 27 seconds. Fair?"]',tip:'💡 Always ask permission first. Never pitch cold.'},
+  post_vp:{phase:'💡 Value Prop Phase',line:'"We will CALL on your behalf and book SALES QUALIFIED MEETINGS directly to your sales team\'s calendar within your ICP. Last month we helped a service-based client close $85,000 in net new business and SIX FIGURES in pipeline — purely from outbound."',tip:'💡 Lead with "hey I want you to listen closely" — deliver with confidence.'},
+  objection:{phase:'🛡️ Objection Phase',line:'"By no means were we expecting this to be a priority — we were only hoping to introduce ourselves for when the timing was right. Would you be opposed to finding 10 minutes tomorrow?"',tip:'💡 ACKNOWLEDGE first. Never argue. Flow through with empathy, then redirect.'},
+  post_obj_open:{phase:'📅 Booking Phase',line:'"Would it make sense to set aside 15 minutes to see whether this could work for your team — in getting more new clients and customers? Sounds good?"',tip:'💡 Then go straight to booking: offer TWO specific times.'},
+  booking:{phase:'📅 Booking Phase',line:'"I just pulled my calendar up. How does [time1] on [day1] or [time2] on [day2] work? [Send invite] Is [email] the best place to send it? I\'m going to send it over as a \'15-Minute Synergy and Strategy Call\' right now."',tip:'💡 Send it immediately. Confirm they received it. Lock in the close.'},
+  booked:{phase:'✅ Closing Phase',line:'"One last thing — I\'m going to follow up ahead of our meeting to confirm the time still works. If anything comes up, what\'s the best way to reach you to reschedule? [Wait] Right on — I\'m looking forward to it! Talk to you soon, [name]. My pleasure speaking with you, have a great day."',tip:'💡 This closes the loop and dramatically improves show rate.'},
+};
+
+// PERSONAS
+const PP={
+  tech:[
+    {n:'Marcus Chen',t:'VP of Sales',c:'CloudBase Solutions',i:'MC',g:'male',v:'tech',pain:'pipeline unpredictability',
+     greet:{easy:['Hey, Marcus here!','This is Marcus — how can I help?'],mid:['This is Marcus.','Yeah, Marcus here.'],hard:['Hello?','Yeah?']},
+     goOpen:{easy:["Sure, you've got 30 seconds — go ahead.",'Of course, what\'s this about?'],mid:["27 seconds — go.",'Alright, make it quick.'],hard:['Fine. Fast.','20 seconds.']},
+     badOpen:{easy:['Well, go ahead anyway.'],mid:['I\'m slammed right now.','Not ideal timing.'],hard:['Stop. I\'m in the middle of something.','Not a good time. At all.']},
+     curious:{easy:['That actually sounds interesting — how do you qualify the meetings?','Tell me more about how it works.'],mid:['How do you qualify the meetings?','What SaaS companies have you worked with?'],hard:['I\'ve heard this pitch. What makes you different?','Prove the $85K claim.']},
+     obj:'have_vendor',
+     objLines:{easy:['We do have someone handling outbound — what makes KolFil different though?'],mid:['We have an internal BDR team handling outbound right now.','We\'ve been using a vendor for six months.'],hard:['We\'ve tried multiple outbound vendors. Zero delivered.','We\'re all set. Don\'t need it.']},
+     afterGoodHandle:{easy:['That makes sense — tell me more about the process.','Okay, I\'m open to hearing more.'],mid:['Fair enough — what would that look like for our team?','Okay, tell me more.'],hard:['You handled that better than most. Go on.','Alright. Continue.']},
+     afterBadHandle:{easy:['Maybe another time — appreciate the call.'],mid:['Not the right timing. Thanks though.'],hard:['Yeah, that\'s what I expected. Good luck.','Not good enough. Goodbye.']},
+     meetingYes:{easy:['Absolutely! Tuesday works great!','Yes — Thursday morning?'],mid:['Tuesday works — what time?','Thursday morning.'],hard:['Fine. Tuesday. 15 minutes. Hard stop.','Wednesday. Don\'t be late.']},
+     meetingConfirm:{easy:['Perfect, send it over! Looking forward to it.','Great, I\'ll accept it.'],mid:['Send the invite, I\'ll accept.','Sounds good — send it.'],hard:['Send it. I\'ll think about it.','Fine.']},
+     reject:{easy:['Not now, keep us in mind.'],mid:['We\'re good for now. Good luck.'],hard:['I said no. Good luck.','Not interested. Stop calling.']}
+    },
+    {n:'Amanda Foster',t:'CRO',c:'Apex SaaS',i:'AF',g:'female',v:'tech',pain:'marketing-to-sales handoff gap',
+     greet:{easy:['Amanda Foster — hi there!','Hey, this is Amanda!'],mid:['Amanda Foster.','This is Amanda.'],hard:['Yes?','Hello?']},
+     goOpen:{easy:['Of course, go ahead!','Sure, I have a moment.'],mid:['Go ahead — 27 seconds.','Alright, quickly.'],hard:['Fine. 20 seconds. Go.','Make it very fast.']},
+     badOpen:{easy:['Well you caught me — but go ahead.'],mid:['I\'m back-to-back today.','Email is better usually.'],hard:['I don\'t do cold calls.','Terrible timing.']},
+     curious:{easy:['Oh interesting! How do you handle the MQL handoff?','Tell me more about the ICP targeting.'],mid:['How do you handle ICP targeting?','What\'s the ramp-up timeline?'],hard:['Every vendor says the same thing. Differentiate yourself.','What\'s your average show rate?']},
+     obj:'send_email',
+     objLines:{easy:['Could you send me something first so I can review before we chat?'],mid:['Send me an email — I\'ll review when I have a minute.','Put something together and send it.'],hard:['Email only. I don\'t meet from cold calls.','Send. Email. Now.']},
+     afterGoodHandle:{easy:['That\'s a fair approach — okay, let\'s chat.','I appreciate that. Let\'s talk.'],mid:['Okay fair. What would a pilot look like?','That logic works.'],hard:['Hm. Better answer than I expected.','Okay. Go on.']},
+     afterBadHandle:{easy:['Maybe later — email is best.'],mid:['Not right now.'],hard:['That\'s what I thought. Goodbye.','Email. Bye.']},
+     meetingYes:{easy:['Wonderful! Wednesday at 2 works!','Yes! Thursday morning!'],mid:['Wednesday afternoon — what time?','Monday 9am.'],hard:['Wednesday. 15 minutes. Sharp.','Thursday. 8am. Non-negotiable.']},
+     meetingConfirm:{easy:['Send it! Excited to connect.','Great, I\'ll watch for it!'],mid:['Send to my work email.','I\'ll accept it.'],hard:['Send it. We\'ll see.','Fine.']},
+     reject:{easy:['Not now, keep me in mind.'],mid:['Email me. Thanks.'],hard:['Email. Don\'t call again.','No. Goodbye.']}
+    }
+  ],
+  staffing:[
+    {n:'Jennifer Walsh',t:'Managing Director',c:'Apex Staffing Group',i:'JW',g:'female',v:'staffing',pain:'recruiters pulled off billable work',
+     greet:{easy:['Jen Walsh — hi there!','This is Jennifer!'],mid:['Jen Walsh.','Jennifer Walsh.'],hard:['Yes?','Hello?']},
+     goOpen:{easy:['Sure, go ahead!','Of course, what is it?'],mid:['27 seconds — go.','Quickly.'],hard:['Real quick. Go.','20 seconds.']},
+     badOpen:{easy:['Go ahead anyway.'],mid:['I\'m with a candidate right now.','Who referred you?'],hard:['I don\'t take cold calls during placements.','Terrible timing.']},
+     curious:{easy:['Oh interesting! How do the job orders come in?','Tell me more!'],mid:['How do you generate job orders?','What industries?'],hard:['Prove it works in IT staffing.','What\'s your fill rate?']},
+     obj:'not_interested',
+     objLines:{easy:['We\'re fine internally — what makes KolFil different?'],mid:['We\'re focused internally right now.','Timing isn\'t quite right.'],hard:['We handle our own BD. Don\'t need this.','Not interested. Built our own pipeline.']},
+     afterGoodHandle:{easy:['That makes a lot of sense. Tell me more.','Really fair point.'],mid:['Makes sense — what would 30 days look like?','Okay, go ahead.'],hard:['Alright, that\'s a decent answer. Continue.','I\'ll give you that. Go on.']},
+     afterBadHandle:{easy:['Maybe another time.'],mid:['Not right now.'],hard:['Nope. Not for us. Good luck.','Hard no.']},
+     meetingYes:{easy:['Absolutely! Friday morning!','Yes, let\'s do it!'],mid:['Friday before noon.','Thursday morning.'],hard:['Fine. Friday. Short.','Thursday. Don\'t waste my time.']},
+     meetingConfirm:{easy:['Wonderful! Send it over!','Perfect, I\'ll watch for it!'],mid:['Send to my work email.','I\'ll look for the invite.'],hard:['Fine. Send it.','Okay.']},
+     reject:{easy:['Not now, thank you.'],mid:['Just not the time.'],hard:['No. Good luck.','Hard no. Goodbye.']}
+    },
+    {n:'Robert Morrison',t:'President',c:'TalentBridge Partners',i:'RM',g:'male',v:'staffing',pain:'generating new books of business',
+     greet:{easy:['Bob Morrison here!','Hey, this is Bob!'],mid:['Robert Morrison.','Bob here.'],hard:['Yeah?','Hello?']},
+     goOpen:{easy:['Sure, I\'ve got a minute.','Go ahead.'],mid:['30 seconds — shoot.','Go ahead.'],hard:['Fast. Go.','20 seconds. That\'s it.']},
+     badOpen:{easy:['Go ahead anyway.'],mid:['Is this sales? I\'m slammed.','Who gave you this number?'],hard:['I don\'t take cold calls.','Wrong time.']},
+     curious:{easy:['That sounds interesting! Results in staffing?','Tell me more.'],mid:['What staffing firms do you work with?','How quickly do you ramp?'],hard:['Every outbound firm says the same thing. Prove it.','I\'ve wasted money on this before.']},
+     obj:'tried_before',
+     objLines:{easy:['We tried something similar — what makes yours different?'],mid:['We tried outbound before — quality wasn\'t there.','Cold calling campaigns never worked for us.'],hard:['Burned $30K on outbound last year. Zero ROI. Why would this be different?','Tried 3 outbound firms. All failed.']},
+     afterGoodHandle:{easy:['That\'s actually a really good point.','Okay, that\'s different — tell me more.'],mid:['Fair point — what makes your approach different?','Alright, I\'m listening.'],hard:['Best answer I\'ve heard. Continue.','You might be different. Go on.']},
+     afterBadHandle:{easy:['Maybe another time.'],mid:['Once bitten twice shy.'],hard:['Same answer as every vendor. Goodbye.','Don\'t call back.']},
+     meetingYes:{easy:['Absolutely! Thursday works!','Yes, this week!'],mid:['Thursday 2pm Eastern?','Wednesday morning?'],hard:['Fine. Thursday. One time only.','Wednesday. Don\'t be late.']},
+     meetingConfirm:{easy:['Perfect, looking forward to it!','Great, send it!'],mid:['Send it over.','Sounds good.'],hard:['Fine. No promises.','Okay.']},
+     reject:{easy:['Not now, thank you.'],mid:['I\'m going to pass.'],hard:['No. Don\'t call back.','Hard no. Good luck.']}
+    }
+  ],
+  industrial:[
+    {n:'Michael Torres',t:'VP Business Development',c:'AutoTech Manufacturing',i:'MT',g:'male',v:'industrial',pain:'trade show dependency and small buyer pool',
+     greet:{easy:['Mike Torres — hey!','This is Mike!'],mid:['Mike Torres.','Michael here.'],hard:['Yeah?','Who is this?']},
+     goOpen:{easy:['Sure, I have a few minutes.','Go ahead.'],mid:['30 seconds — go.','Quickly.'],hard:['Fine. Fast.','20 seconds.']},
+     badOpen:{easy:['Go ahead anyway.'],mid:['We\'re in a project review.','Not the best time.'],hard:['We\'re in production. Better be worth it.','Terrible timing.']},
+     curious:{easy:['Interesting! What manufacturers have you worked with?','How do you reach procurement?'],mid:['What manufacturers have you worked with?','How do you reach plant managers?'],hard:['Every cold caller claims they can reach manufacturers. Prove it.','I don\'t believe you can reach our buyers.']},
+     obj:'pricing',
+     objLines:{easy:['What does the investment look like?'],mid:['What\'s the cost before I spend more time?','What\'s the pricing?'],hard:['What does this cost? Over $2K/month and I\'m done.','Price. Now.']},
+     afterGoodHandle:{easy:['That\'s reasonable! Tell me more.','Okay, that makes sense.'],mid:['Reasonable — tell me about the targeting.','Fair — who are you reaching?'],hard:['Okay, fair answer. But I\'m still skeptical.','Hmm. Go on.']},
+     afterBadHandle:{easy:['Maybe another time.'],mid:['Too vague.','Need specifics.'],hard:['Not good enough. Goodbye.','Vague. Not interested.']},
+     meetingYes:{easy:['Yes! Next week works great!','Absolutely, Tuesday!'],mid:['Tuesday or Thursday?','Monday afternoon.'],hard:['Fine. Tuesday. 15 minutes. Hard stop.','Thursday. No exceptions.']},
+     meetingConfirm:{easy:['Send it over! Excited to chat.','Perfect!'],mid:['Send to my company email.','Go ahead.'],hard:['Send it. We\'ll see.','Fine.']},
+     reject:{easy:['Not now but maybe later.'],mid:['Not the right time.'],hard:['No. Do not call back.','Hard pass. Goodbye.']}
+    },
+    {n:'Patricia Nguyen',t:'CEO',c:'Precision Industrial',i:'PN',g:'female',v:'industrial',pain:'reaching the right buyers in a niche market',
+     greet:{easy:['Pat Nguyen — hi there!','This is Patricia!'],mid:['Pat Nguyen.','Patricia here.'],hard:['Hello?','Yes?']},
+     goOpen:{easy:['Sure, what is it?','Of course, go ahead.'],mid:['Quick version?','27 seconds.'],hard:['Fine. But I mean 27 seconds.','Fast.']},
+     badOpen:{easy:['Go ahead.'],mid:['Heading into a plant walk.','I don\'t take cold calls.'],hard:['Strict no cold call policy.','This is never a good time.']},
+     curious:{easy:['Interesting! How niche can you go?','Tell me more!'],mid:['How niche can you go?','Anything in precision components?'],hard:['We\'re extremely niche. I doubt you can reach our buyers.','Our market is tiny. This won\'t work.']},
+     obj:'not_right_person',
+     objLines:{easy:['Our VP of Sales usually handles this — should I connect you?'],mid:['You probably want our VP of Sales.','Sales decisions go through my VP.'],hard:['Wrong person. Call the switchboard.','I don\'t handle vendor decisions. Goodbye.']},
+     afterGoodHandle:{easy:['That\'s a good point! I\'ll hear you out.','Fair — go ahead.'],mid:['Fair enough — I\'ll hear you out.','Okay, go ahead.'],hard:['That\'s actually reasonable. Fine.','Okay, I\'ll give you that.']},
+     afterBadHandle:{easy:['Maybe later.'],mid:['Talk to my VP.'],hard:['Not good enough. Goodbye.','No. Goodbye.']},
+     meetingYes:{easy:['Yes! Friday works!','Absolutely!'],mid:['Friday — 15 minutes max.','Thursday morning.'],hard:['Fine. Friday. 15 minutes. Not a second more.','Thursday. Brief.']},
+     meetingConfirm:{easy:['Wonderful! Looking forward to it!','Great, I\'m excited!'],mid:['Send it directly to me.','Looking forward to it.'],hard:['Send it.','Okay.']},
+     reject:{easy:['Not now, thank you.'],mid:['Not for me.'],hard:['No. Don\'t call again.','Hard no.']}
+    }
+  ]
+};
+
+// GATEKEEPERS
+const GKS=[
+  {name:'Reception',greet:['Thank you for calling, how can I direct your call?','[Company] — who may I ask is calling?','Good morning, [Company]! Who are you calling for?']},
+];
+const GK_PROBE=['Sure — can I tell them what this is regarding?','And your company name?','I see — and who am I speaking with?'];
+const GK_TRANSFER=['One moment, I\'ll connect you now.','Let me transfer you — please hold.','Sure, let me put you through.'];
+const GK_REJECT=['I\'m sorry, they\'re not taking calls right now.','They\'re unavailable — can I take a message?','I\'ll let them know you called. Have a great day.'];
+
+// HINTS
+const HINTS_DATA={
+  greeting:{phase:'📞 Opening Phase',line:'"Hi, is this [Name]? Hi [name]. It\'s [YOUR NAME]. I hope I didn\'t catch you at the bad time — I actually came across [company name]. May I share why I\'m calling? I promise to be quick — about 27 seconds. Fair?"',tip:'💡 HARD STOP after "Fair?" — wait for their go-signal. Smile while you say it.'},
+  opener_good:{phase:'📞 Opening Phase',line:'"I\'m calling from a company named KOLFIL." [Control your pace — don\'t rush]',tip:'💡 Acknowledge their go-ahead warmly before delivering the pitch.'},
+  opener_bad:{phase:'📞 Try Again — Opening',line:'"I hope I didn\'t catch you at a bad time — may I share why I\'m calling? About 27 seconds. Fair?"',tip:'💡 Even mid-call you can recover — ask for permission to continue.'},
+  post_vp:{phase:'💡 Value Prop Phase',line:'"We will CALL on your behalf and book SALES QUALIFIED MEETINGS directly to your sales team\'s calendar within your ICP. Last month we helped a service-based client close $85,000 in net new business and SIX FIGURES in pipeline — purely from outbound."',tip:'💡 Deliver it confidently, not fast. Then ask: "Is anything like that on your radar?"'},
+  objection:{phase:'🛡️ Objection Phase',line:'"By no means were we expecting this to be a priority — only hoping to introduce ourselves for when the timing was right. Would you be opposed to finding 10 minutes tomorrow?"',tip:'💡 Golden rule: ACKNOWLEDGE first. Never argue head-on. Flow through with empathy.'},
+  post_obj_open:{phase:'📅 Booking Phase',line:'"Would it make sense to set aside 15 minutes to see whether this could work for your team in getting more new clients and customers? Sounds good?"',tip:'💡 Then immediately offer two specific times — don\'t ask "when are you free?"'},
+  booking:{phase:'📅 Booking Phase',line:'"How does [time1] on [day1] or [time2] on [day2] work? [Wait] Alright, great! Sending it over as a \'15-Minute Synergy and Strategy Call\' right now. Is [email] the best place?"',tip:'💡 Send the invite WHILE they\'re on the phone. Never say "I\'ll send it later."'},
+  booked:{phase:'✅ Closing Phase',line:'"One last thing — I\'ll follow up ahead of our meeting. If anything comes up, what\'s the best way to reach you to reschedule? [Wait] Right on — looking forward to it! My pleasure speaking with you, have a great day."',tip:'💡 This closing spiel is what separates 70% show rates from 90%+.'},
+  post_obj_closed:{phase:'🔄 Recovery',line:'Try: "By no means were we expecting this to be a priority — only hoping to introduce ourselves for when the timing was right."',tip:'💡 Even after rejection you can redirect. Acknowledge, don\'t argue.'},
+  ended:{phase:'✅ Wrap Up',line:'"Right on — I\'m looking forward to it! Talk to you soon, [name]. My pleasure speaking with you, have a great day."',tip:'💡 Always end the same way — warm, professional, memorable.'},
+};
+
+// OBJECTION DRILLS
+// DRILLS defined below
+
+// COACHING DATA
+const COACHING={
+  open:{No:{why:'You jumped straight into the pitch without asking permission. Prospects hang up when they feel ambushed.',script:'"Hi, is this [Name]? Hi [name]. It\'s [YOUR NAME]. I hope I didn\'t catch you at the bad time — I actually came across [company]. May I share why I\'m calling? Quick — about 27 seconds. Fair?"',tip:'HARD STOP after "Fair?" — wait for their go-signal before anything else.'},
+       'Permission-based':{why:'You asked permission but skipped the soft opener. "I hope I didn\'t catch you at the bad time" significantly lowers resistance.',script:'"I hope I didn\'t catch you at the bad time — I actually came across [company name]. May I share why I\'m calling? About 27 seconds. Fair?"',tip:'The soft opener makes you sound human, not like a script. Don\'t skip it.'}},
+  callOpen:{Partial:{why:'Your opener was too long or rushed. KolFil\'s opener is designed to be delivered in under 27 seconds.',script:'Name → Soft disarm → Permission → 27 seconds → HARD STOP.',tip:'Time yourself. Practice saying it in under 20 seconds without rushing.'}},
+  verify:{No:{why:'You never confirmed who you were speaking with. You could be pitching the wrong person.',script:'"Before I dive in — am I speaking with the [title] for [company name]?"',tip:'Do this right after they give you the go-ahead. Acknowledge their answer: "Ok! Awesome!"'}},
+  vp:{No:{why:'You didn\'t deliver KolFil\'s core value proposition. This is the most important 30 seconds of the call.',script:'"What we do is simple: we will CALL on your behalf and book SALES QUALIFIED MEETINGS directly to your sales team\'s calendar within your ICP. Last month we helped a service-based client close $85,000 in net new business and SIX FIGURES in pipeline — purely from outbound."',tip:'Lead with "hey I want you to listen closely." Deliver it with confidence, not speed.'},
+      Partial:{why:'Value prop delivered but you skipped the social proof. The $85K example makes it real.',script:'"...last month we helped a service-based client close $85,000 in net new business and SIX FIGURES in pipeline — purely from outbound calling."',tip:'Always include the numbers. Specific results create credibility. Never leave them out.'}},
+  objH:{No:{why:'When the objection came, you argued it or didn\'t acknowledge properly. That kills the call.',script:'"By no means were we expecting this to be a priority — we were only hoping to introduce ourselves for when the timing was right. Would you be opposed to finding 10 minutes tomorrow?"',tip:'Golden rule: RECEIVE and ACKNOWLEDGE first. Never fight the objection. Flow through with empathy.'}},
+  disc:{No:{why:'No discovery questions. Discovery builds rapport and uncovers pain — it separates a conversation from a pitch.',script:'"How do you currently generate your leads and get in front of potential clients?" or "What challenges do you have generating revenue or getting more clients?"',tip:'Ask ONE great discovery question after the value prop. Their answer tells you exactly how to close.'}},
+  apptCl:{No:{why:'Meeting not booked or booked without confirming specifics.',script:'"How does [day] [morning/afternoon] look? I just pulled my calendar — how does [time1] on [day1] or [time2] on [day2] work?"',tip:'Always offer TWO specific time options. Don\'t ask "when are you free?" — that puts work on them.'},
+          Partial:{why:'Meeting booked but details were vague.',script:'Confirm: "Alright great! I\'m going to send it as a 15-Minute Synergy and Strategy Call. [date] at [time] [timezone] — is that correct?"',tip:'Appointment clarity directly improves show rate. Vague meetings get no-showed.'}},
+  calInv:{No:{why:'You didn\'t send or confirm the calendar invite during the call.',script:'"I\'m sending it over as a \'15-Minute Synergy and Strategy Call\' right now. Is [email] the best place? [Send it] You should see the invitation now. Will you let me know if it surpasses your email security?"',tip:'Send it WHILE they\'re on the phone. Never say "I\'ll send it later."'},
+          Partial:{why:'Booked but didn\'t confirm the email or verify they received it.',script:'"Is [email] the best place? [Send it] You should see the invitation now — will you let me know if it surpasses your email security?"',tip:'Always verify the invite landed. Email security filters are real.'}},
+  closing:{No:{why:'You ended without giving the prospect reschedule instructions.',script:'"One last thing — I\'m going to follow up ahead of our meeting. If anything comes up, what\'s the best way to reach you so we can easily reschedule?"',tip:'This one question dramatically improves show rate. It gives them an out before the meeting instead of ghosting.'},
+           Partial:{why:'Good close but missed the reschedule question.',script:'Add: "If anything comes up, what\'s the best way to reach you so we can easily reschedule?"',tip:'This shows respect and builds trust. Never skip it.'}},
+  callback:{No:{why:'No follow-up call or callback reminder mentioned.',script:'"I\'m going to follow up with you ahead of our meeting to confirm the time still works for you."',tip:'Commit: day before for 9am-11am meetings, 2 hours before for afternoon meetings.'}},
+  dialer:{No:{why:'The call didn\'t end with KolFil\'s professional sign-off.',script:'"Right on — I\'m looking forward to it! Talk to you soon, [name]. My pleasure speaking with you, have a great day."',tip:'Every call ends the same way. Warm, professional, memorable. Learn it word for word.'},
+          Partial:{why:'Polite close but not KolFil\'s exact sign-off.',script:'"Right on — I\'m looking forward to it! Talk to you soon, [name]. My pleasure speaking with you, have a great day."',tip:'The exact sign-off matters for QA. Practice it until it\'s automatic.'}},
+  approach:{'Informative - no targeted questions':{why:'You delivered info but asked no questions. One-way pitches rarely convert.',script:'After value prop: "Is anything like that on your radar right now?" or "How do you currently generate leads and get in front of potential clients?"',tip:'Questions create dialogue. Dialogue creates buy-in. Pitches create resistance.'}},
+};
+
+// ══════════════════════
+// VOICE SETUP
+// ══════════════════════
+function initVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(SR){
+    recog=new SR();
+    recog.continuous=true;recog.interimResults=true;recog.lang='en-US';
+    recog.onresult=(e)=>{let full='';for(let i=0;i<e.results.length;i++)full+=e.results[i][0].transcript+' ';pendingTx=full.trim();document.getElementById('ltx').textContent=pendingTx;};
+    recog.onerror=(e)=>{if(e.error!=='no-speech')console.warn(e.error);};
+    recog.onend=()=>{if(isListen)try{recog.start();}catch(ex){}};
+  }
+  function loadV(){
+    const vs=synth.getVoices();
+    // US MALE: David or Mark
+    vMale=vs.find(v=>/david/i.test(v.name)&&v.lang.startsWith('en'))||
+          vs.find(v=>/mark/i.test(v.name)&&v.lang.startsWith('en'))||
+          vs.find(v=>/guy/i.test(v.name)&&v.lang.startsWith('en'))||
+          vs.find(v=>v.lang==='en-US'&&!/female|zira|google us english|samantha/i.test(v.name))||
+          vs.find(v=>v.lang.startsWith('en'))||vs[0];
+    console.log('Voices loaded');
+    vFemale=vs.find(v=>/zira/i.test(v.name))||
+            vs.find(v=>/google us english/i.test(v.name))||
+            vs.find(v=>/samantha/i.test(v.name))||
+            vs.find(v=>/female/i.test(v.name)&&v.lang.startsWith('en'))||vMale;
+    console.log('Male voice:',vMale&&vMale.name,'| Female:',vFemale&&vFemale.name);
+  }
+  if(synth.getVoices().length)loadV(); else synth.onvoiceschanged=loadV;
+}
+window.addEventListener('DOMContentLoaded',initVoice);
+
+function speak(text,cb){
+  if(!synth||!text){cb&&cb();return;}
+  synth.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  const v=persona?.g==='female'?vFemale:vMale;
+  if(v)u.voice=v;
+  u.rate=diff==='hard'?1.1:diff==='easy'?0.92:1.0;
+  u.pitch=persona?.g==='female'?1.1:0.95;
+  isSpeaking=true;
+  const pa=document.getElementById('pav');if(pa)pa.classList.add('sp');
+  const sb=document.getElementById('speakBar');if(sb)sb.classList.add('show');
+  const sl=document.getElementById('speakLbl');if(sl)sl.textContent=persona?`${persona.n} speaking...`:'Speaking...';
+  
+  const mb=document.getElementById('micb');if(mb)mb.disabled=true;
+  u.onend=u.onerror=()=>{
+    isSpeaking=false;
+    if(pa)pa.classList.remove('sp');if(sb)sb.classList.remove('show');
+    
+    const mb2=document.getElementById('micb');if(mb2)mb2.disabled=false;if(callActive)setMS('ready');
+    cb&&cb();
+  };
+  synth.speak(u);
+}
+
+function togMic(){if(!callActive||isSpeaking)return;if(isListen)stopAndSend();else startListen();}
+function startListen(){
+  if(!recog){alert('Voice requires Chrome or Edge. Switching to text.');setInput('text');applyInput();return;}
+  if(!callActive||isSpeaking)return;
+  isListen=true;pendingTx='';document.getElementById('ltx').textContent='Listening...';
+  try{recog.abort();}catch(e){}setTimeout(()=>{try{recog.start();}catch(e){}},100);
+  setMS('lst');
+}
+function stopAndSend(){
+  isListen=false;try{recog.abort();}catch(e){}
+  const text=pendingTx.trim();pendingTx='';document.getElementById('ltx').textContent=' ';
+  setMS('ready');if(text&&callActive)process(text);
+}
+function setMS(st){
+  const b=document.getElementById('micb'),r=document.getElementById('mring'),l=document.getElementById('mst');
+  if(!b)return;b.className='micb';if(r)r.className='mic-ring';
+  if(st==='lst'){b.classList.add('lst');if(r)r.classList.add('lst');b.textContent='⏹';if(l)l.textContent='Speaking... tap ⏹ when done';}
+  else if(st==='spt'){b.classList.add('spt');if(r)r.classList.add('spt');b.textContent='🔊';if(l)l.textContent='Prospect speaking...';}
+  else{b.textContent='🎤';if(l)l.textContent='Tap to speak';}
+}
+
+// ══════════════════════
+// UI HELPERS
+// ══════════════════════
+function rnd(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function g(obj,d){const arr=obj[d]||obj.mid||[];return rnd(arr);}
+function getPerson(v,d){const vv=v==='random'?['tech','staffing','industrial'][Math.floor(Math.random()*3)]:v;const pool=PP[vv];const p=pool[Math.floor(Math.random()*pool.length)];return{...p,diff:d};}
+function setV(v,btn){vert=v;document.querySelectorAll('.vb').forEach(b=>b.classList.remove('on'));btn.classList.add('on');}
+function setD(d,btn){diff=d;document.querySelectorAll('.db').forEach(b=>b.classList.remove('on','easy','mid','hard'));btn.classList.add('on',d);}
+function setInput(m,btn){inputMode=m;['iVoice'].forEach(id=>{const el=document.getElementById(id);if(el){el.classList.remove('on','easy','mid','hard');}});if(btn)btn.classList.add('on',m==='voice'?'easy':'mid');}
+function applyInput(){
+  var vm=document.getElementById('vmUI');
+  if(vm)vm.style.display='flex'; // voice only
+}
+function setMode(m,el){lobbyMode=m;document.getElementById('mFull').classList.toggle('on',m==='full');document.getElementById('mDrill').classList.toggle('on',m==='drill');document.getElementById('simOptions').style.display=m==='full'?'':'none';document.getElementById('goBtn').textContent=m==='full'?'📞 START CALL':'⚡ START DRILLS';}
+function showSc(id){document.querySelectorAll('.screen').forEach(s=>{if(s.id===id)s.classList.remove('hidden');else s.classList.add('hidden');});}
+function updSessBar(){document.getElementById('ssCalls').textContent=session.calls;document.getElementById('ssBest').textContent=session.best||'—';document.getElementById('ssStreak').textContent=session.streak+'🔥';document.getElementById('ssDrills').textContent=session.drills;}
+
+function addMsg(role,text){
+  const a=document.getElementById('chat');
+  const d=document.createElement('div');d.className=`msg ${role}`;
+  const who=role==='pro'?persona.n:role==='sys'?'⚠️ System':('You (SDR)');
+  d.innerHTML=`<div class="mi2"><div class="mw">${who}</div><div class="bbl">${text}</div></div>`;
+  a.appendChild(d);a.scrollTop=a.scrollHeight;
+  if(role==='sdr')allSDR.push(text);
+  hist.push({role,text});
+}
+function showTyp(){const a=document.getElementById('chat');const d=document.createElement('div');d.id='typ';d.innerHTML='<div class="typ"><div class="td"></div><div class="td"></div><div class="td"></div></div>';a.appendChild(d);a.scrollTop=a.scrollHeight;}
+function hideTyp(){const t=document.getElementById('typ');if(t)t.remove();}
+
+function updPhase(){
+  [['p0',3],['p1',5],['p2',8],['p3',11],['p4',14]].forEach(([id,thresh],i)=>{
+    const el=document.getElementById(id);if(!el)return;
+    el.className='ph';
+    if(msgCount>=thresh)el.classList.add('dn');
+    else if((i===0&&msgCount<3)||(i===1&&msgCount>=3&&msgCount<5)||(i===2&&msgCount>=5&&msgCount<8)||(i===3&&msgCount>=8&&msgCount<12)||(i===4&&msgCount>=12))el.classList.add('act');
+  });
+  updateHint();
+}
+
+function updateHint(){
+  const phase=convState.phase;
+  const hd=HINTS_DATA[phase]||HINTS_DATA.greeting;
+  document.getElementById('hintPhase').textContent=hd.phase;
+  document.getElementById('hintLine').textContent=hd.line;
+  document.getElementById('hintTip').textContent=hd.tip;
+}
+
+let hintOn=false;
+function togHint(){
+  hintOn=!hintOn;
+  document.getElementById('hintBtn').classList.toggle('on',hintOn);
+  document.getElementById('hintPanel').classList.toggle('show',hintOn);
+  updateHint();
+}
+
+function startTmr(){secs=0;timInt=setInterval(()=>{secs++;const m=String(Math.floor(secs/60)).padStart(2,'0');const s=String(secs%60).padStart(2,'0');document.getElementById('ctm').textContent=`${m}:${s}`;},1000);}
+function stopTmr(){clearInterval(timInt);}
+
+// ══════════════════════
+// GATEKEEPER ENGINE
+// ══════════════════════
+function gkResponse(sdrText){
+  const s=sdrText.toLowerCase();
+  const hasName=/my name is|this is|i'm [a-z]/i.test(s);
+  const hasCompany=/kolfil/i.test(s);
+  const hasReason=/calling|reach|speak|connect|quick|moment/i.test(s);
+  convState.gkFailed=(convState.gkFailed||0)+(hasName&&hasCompany?0:1);
+  if(hasName&&hasCompany){convState.gkPhase=false;return {transfer:true,text:rnd(GK_TRANSFER)};}
+  if(convState.gkFailed>=2){convState.gkPhase=false;convState.ended=true;return {transfer:false,text:rnd(GK_REJECT)};}
+  return {transfer:false,text:rnd(GK_PROBE)};
+}
+
+// ══════════════════════
+// CONVERSATION ENGINE
+// ══════════════════════
+function getResponse(t){
+  const s=t.toLowerCase(),p=persona,ph=convState.phase,d=diff;
+  const hasPermission=/27 second|fair\?|may i share|quick.*call|promise.*quick|quick.*27/i.test(s);
+  const hasSoftOpen=/hope i didn|bad time|came across|i actually came/i.test(s);
+  const hasValueProp=/meeting|calendar|qualified|outbound|pipeline|call on your behalf|book|appointment|sales qualified/i.test(s);
+  const hasSocial=/85|six figure|net new|eighty/i.test(s);
+  const hasObjHandle=/by no means|not expecting|hoping to introduce|would you be opposed|timing was right|10 minute|15 minute|appreciate.*but|totally fair|makes sense/i.test(s);
+  const hasQuestion=/how do you.*generat|what challenge|how do you.*get.*client|what.s.*current|how are you/i.test(s);
+  const hasBooking=/15 minute|calendar|schedule|tuesday|monday|wednesday|thursday|friday|morning|afternoon|[0-9]:[0-9]|next week/i.test(s);
+  const hasInvite=/invite|send it over|sending.*now|cal.com|check.*inbox|check.*email/i.test(s);
+  const hasReschedule=/reschedule|comes up.*let us know|best way.*reach.*reschedule|availability/i.test(s);
+  const hasClose=/right on.*looking forward|my pleasure.*speaking|have a great day|talk to you soon|looking forward.*talk/i.test(s);
+
+  if(ph==='greeting'){
+    // Tough mode: bad opener = hang up
+    if(d==='hard'&&!hasPermission&&!hasSoftOpen){convState.ended=true;convState.phase='ended';return '"[Click]" — They hung up. On Tough mode, a bad opener ends the call. Always ask permission first.';}
+    if(hasPermission||hasSoftOpen){convState.phase='opener_good';return g(p.goOpen,d);}
+    convState.phase='opener_bad';return g(p.badOpen,d);
+  }
+  if(ph==='opener_good'||ph==='opener_bad'){
+    if(hasValueProp){convState.phase='post_vp';return d==='easy'?g(p.curious,d):d==='hard'&&!hasSocial?rnd(['I\'ve heard that before. Show me the numbers.','What\'s your proof?']):g(p.curious,d);}
+    if(d==='hard')return rnd(['Get to the point.','I don\'t have all day.']);
+    return d==='easy'?rnd(['Go on, I\'m listening.','Tell me more.']):rnd(['Okay, and?','Go on.']);
+  }
+  if(ph==='post_vp'){convState.phase='objection';return g(p.objLines,d);}
+  if(ph==='objection'){
+    convState.objDone=true;
+    if(hasObjHandle){convState.objHandled=true;convState.phase='post_obj_open';return g(p.afterGoodHandle,d);}
+    // Tough mode: poor handle = end call
+    if(d==='hard'){convState.ended=true;convState.phase='ended';return g(p.reject,d);}
+    convState.objHandled=false;convState.phase='post_obj_closed';return g(p.afterBadHandle,d);
+  }
+  if(ph==='post_obj_closed'){
+    // One more chance on easy/mid
+    if(d!=='hard'&&hasObjHandle){convState.objHandled=true;convState.phase='post_obj_open';return d==='easy'?'You know what — that\'s actually fair. Tell me more.':'Alright, I\'ll give you that. Go on.';}
+    convState.ended=true;convState.phase='ended';return g(p.reject,d);
+  }
+  if(ph==='post_obj_open'){
+    if(hasBooking){convState.phase='booking';return g(p.meetingYes,d);}
+    if(hasQuestion)return d==='easy'?rnd(['Great question!','I love that you asked that.']):rnd(['That\'s the right question.','Good.']);
+    return d==='easy'?rnd(['What\'s the next step?','I\'m interested — what do you propose?']):rnd(['What exactly are you proposing?','What\'s the ask?']);
+  }
+  if(ph==='booking'){
+    if(hasInvite&&hasReschedule){convState.booked=true;convState.phase='booked';return g(p.meetingConfirm,d);}
+    if(hasInvite||hasBooking||hasClose){convState.booked=true;convState.phase='booked';return g(p.meetingConfirm,d);}
+    return d==='easy'?rnd(['That works! What time?','I\'m free most of the week!']):rnd(['What time works?','Send me a couple options.']);
+  }
+  if(ph==='booked'){convState.ended=true;convState.phase='ended';return d==='easy'?rnd(['Wonderful! Talk soon! Have a great day!','Looking forward to it! Bye!']):rnd(['Talk soon.','Looking forward to it. Have a good one.']);}
+  if(ph==='post_booking'){
+    var pbDayBefore=/day before|tomorrow|night before|morning of|the day/i.test(s);
+    var pbTwoHours=/two hour|2 hour|hour before|couple.*hour|few.*hour/i.test(s);
+    var pbFollowUp=/follow up|call.*confirm|reminder|ahead of|check in|reach out|i will call/i.test(s);
+    var pbReschedule=/reschedule|comes up|availability|best way.*reach|let.*know|if anything/i.test(s);
+    var pbSignoff=/right on|looking forward|my pleasure|have a great|talk to you soon|speak.*soon/i.test(s);
+    // Signoff ends the call
+    if(pbSignoff){
+      convState.ended=true;convState.phase='ended';
+      return d==='easy'?rnd(['Wonderful! Talk soon! Have a great day!','Looking forward to it! Speak then!','This was great — bye!']):rnd(['Talk soon.','Looking forward to it. Have a good one.','Speak then.']);
+    }
+    // Specific callback timing responses
+    if(pbDayBefore&&pbFollowUp) return rnd(['Perfect — a day-before call works great for me.','Sounds good — I appreciate the heads up.','Great, I will expect your call.']);
+    if(pbTwoHours&&pbFollowUp) return rnd(['A two-hour reminder works — thank you.','Perfect, I will keep an eye out for your call.','That works great — thank you.']);
+    if(pbFollowUp&&pbReschedule) return rnd(['Sounds great — appreciate that.','Perfect, I will keep that in mind.','Great, I have your number.']);
+    if(pbFollowUp) return rnd(['Sure, a reminder call works.','That is helpful, thank you.','Great — I appreciate that.']);
+    if(pbReschedule) return rnd(['Got it — I will reach out if anything changes.','Will do.','I have your number, thanks.']);
+    // Guide them if they are lost
+    return rnd(['Is there anything else before we wrap up?','Sounds good.','Got it — anything else?']);
+  }
+  if(ph==='ended')return rnd(['Have a good day.','Take care.']);
+  return d==='easy'?rnd(['Go on, I\'m listening!','Tell me more!']):rnd(['Go on.','Okay.']);
+}
+
+// ══════════════════════
+// PROCESS
+// ══════════════════════
+function process(text){
+  if(!text||!callActive||isSpeaking)return;
+  addMsg('sdr',text);msgCount++;updPhase();
+  const willEnd=/right on.*looking forward|my pleasure speaking|have a great day|talk to you soon|looking forward.*talk.*soon/i.test(text);
+
+  // GATEKEEPER PHASE
+  if(convState.gkPhase){
+    showTyp();
+    setTimeout(()=>{
+      hideTyp();
+      const gkRes=gkResponse(text);
+      addMsg('pro',gkRes.text);msgCount++;
+      if(gkRes.transfer){
+        // Transfer to prospect
+        setTimeout(()=>{
+          addMsg('sys','📞 Transferring to '+persona.n+'...');
+          setTimeout(()=>{
+            const greet2=g(persona.greet,diff);
+            addMsg('pro',greet2);msgCount++;
+            speak(greet2,()=>{if(callActive)setMS('ready');});
+          },800);
+        },600);
+      } else if(convState.ended){
+        speak(gkRes.text,()=>setTimeout(()=>endCall(),800));
+      } else {
+        speak(gkRes.text,()=>{if(callActive)setMS('ready');});
+      }
+    },600+Math.random()*400);
+    return;
+  }
+
+  // NORMAL CALL
+  const delay=diff==='hard'?400:diff==='easy'?1000:700;
+  showTyp();
+  setTimeout(()=>{
+    hideTyp();
+    const reply=getResponse(text);
+    addMsg('pro',reply);msgCount++;updPhase();
+    const prospectEnd=/talk soon|take care|have a good|bye|hung up/i.test(reply)&&convState.ended;
+    // Show calendar trigger when prospect agrees to meet
+    if((convState.phase==='booking'||convState.phase==='booked')&&!bookingData.used){
+      const bt=document.getElementById('bookTrigger');
+      if(bt)bt.classList.add('show');
+      setTimeout(function(){
+        const bt2=document.getElementById('bookTrigger');
+        if(bt2)bt2.scrollIntoView({behavior:'smooth',block:'nearest'});
+      },300);
+    }
+    speak(reply,()=>{if((willEnd||prospectEnd)&&callActive)setTimeout(()=>endCall(),700);});
+  },delay+Math.random()*350);
+}
+
+function sendTxt(){setMS('ready');}  // sendTxt removed - voice only
+function hkMain(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendTxt();}}
+function arMain(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,96)+'px';}
+
+// ══════════════════════
+// BOOT
+// ══════════════════════
+function goStart(){
+  try{
+    if(lobbyMode==='drill')startDrill();else boot();
+  }catch(e){console.error('goStart error:',e);alert('Error starting: '+e.message);}
+}
+
+function boot(){
+  // Show lead card first
+  persona=getPerson(vert,diff);retryPersona=persona;
+  hist=[];allSDR=[];msgCount=0;pendingTx='';
+  convState={phase:'greeting',gkPhase:false,gkFailed:0,objDone:false,objHandled:false,booked:false,ended:false};
+  bookingData={used:false,date:null,time:null,email:null,name:null};
+  leadData=generateLead(persona);
+  // Reset book trigger
+  var bt=document.getElementById('bookTrigger');
+  var btb=document.getElementById('bookTriggerBtn');
+  if(bt)bt.className='book-trigger';
+  if(btb){btb.className='book-trigger-btn';btb.textContent='📅 Prospect agreed! Book the meeting now →';}
+  showLeadCard();
+}
+
+async function startDialing(){
+  showSc('call');applyInput();
+  populateLeadSheet();
+  const hasGK=(diff==='mid'&&Math.random()<0.3)||(diff==='hard'&&Math.random()<0.55);
+  if(hasGK)convState.gkPhase=true;
+
+  document.getElementById('rav').textContent=hasGK?'👤':persona.i;
+  document.getElementById('ringLbl').textContent=hasGK?'Connecting...':persona.n;
+  document.getElementById('ringSub').textContent=hasGK?`${persona.c} — Reception`:`${persona.t} · ${persona.c}`;
+  document.getElementById('ring').classList.add('show');
+  document.getElementById('pav').textContent=hasGK?'👤':persona.i;
+  document.getElementById('pav').className='pav'+(hasGK?' gk-av':'');
+  document.getElementById('pn').textContent=hasGK?'Gatekeeper — '+persona.c:persona.n;
+  document.getElementById('ps').textContent=hasGK?'Get past reception to reach '+persona.n:`${persona.t} · ${persona.c}`;
+  document.getElementById('csd').className='csd'+(hasGK?' gk':'');
+  document.getElementById('csl').textContent=hasGK?'GATEKEEPER':'RINGING';
+  document.getElementById('csl').className='csl'+(hasGK?' gk':'');
+  updateHint();
+
+  await new Promise(r=>setTimeout(r,diff==='hard'?1400:2000));
+
+  const firstLine=hasGK?rnd(GKS[0].greet).replace('[Company]',persona.c):g(persona.greet,diff);
+  document.getElementById('ring').classList.remove('show');
+  if(!hasGK){document.getElementById('csd').classList.add('live');document.getElementById('csl').classList.add('live');document.getElementById('csl').textContent='IN CALL';}
+  startTmr();callActive=true;
+  addMsg('pro',firstLine);msgCount++;updPhase();
+  speak(firstLine,()=>{if(callActive)setMS('ready');});
+  btn.disabled=false;btn.textContent='📞 START CALL';
+}
+
+// ══════════════════════
+// END CALL + SCORE
+// ══════════════════════
+function endCall(){
+  if(!callActive)return;
+  callActive=false;stopTmr();synth.cancel();isSpeaking=false;
+  if(isListen){isListen=false;try{recog.abort();}catch(e){}}
+  document.getElementById('speakBar').classList.remove('show');
+  document.getElementById('csd').className='csd';
+  document.getElementById('csl').textContent='CALL ENDED';document.getElementById('csl').className='csl';
+  
+  const mb=document.getElementById('micb');if(mb)mb.disabled=true;
+  showSc('score');
+  const data=scoreCall();
+  session.calls++;
+  const isNewBest=data.overall>session.best;
+  if(isNewBest)session.best=data.overall;
+  if(data.overall>=70)session.streak++;else session.streak=0;
+  updSessBar();
+  renderScore(data,isNewBest);
+}
+
+function scoreCall(){
+  const s=allSDR.join(' ').toLowerCase();
+  const scores={
+    open:/hope i didn|bad time|came across/i.test(s)&&/27 second|fair\?|may i share|promise.*quick/i.test(s)?'Compliant':/27 second|fair\?|may i share|promise.*quick/i.test(s)?'Permission-based':'No',
+    callOpen:allSDR.length>0&&allSDR[0].split(' ').length<65?'Yes':'Partial',
+    verify:/title|position|right person|am i speaking|speaking with/i.test(s)?'Yes':'No',
+    vp:/sales qualified|outbound|call on your behalf|pipeline|qualified.*meeting/i.test(s)&&/85|six figure|net new/i.test(s)?'Yes':/sales qualified|outbound|call on your behalf|pipeline/i.test(s)?'Partial':'No',
+    objH:convState.objDone?(/by no means|not expecting|hoping to introduce|would you be opposed|timing was right|10 minute|15 minute/i.test(s)?'Yes':'No'):'NA',
+    disc:/how do you.*generat|what challenge|how do you.*get.*client|what.s.*current/i.test(s)?'Yes':'No',
+    apptCl:convState.booked&&/tuesday|monday|wednesday|thursday|friday|morning|afternoon|[0-9]:[0-9]/i.test(s)?'Yes':convState.booked?'Partial':'No',
+    calInv:convState.booked&&/invite|send it over|sending.*now|cal.com|check.*inbox/i.test(s)?'Yes':convState.booked?'Partial':'No',
+    closing:/reschedule|comes up.*let us know|best way.*reach.*reschedule/i.test(s)?'Yes':/my pleasure|have a great|looking forward/i.test(s)?'Partial':'No',
+    callback:/follow up.*meeting|call.*confirm|reminder.*meeting|ahead of our|day before|two hour|2 hour|hour before/i.test(s)?'Yes':'No',
+    showR:convState.booked&&convState.objHandled?'Yes':convState.booked?'Partial':'No',
+    dialer:/right on.*looking forward|my pleasure.*speaking|have a great day/i.test(s)?'Yes':/looking forward|talk soon/i.test(s)?'Partial':'No',
+    approach:/how do you.*generat|what challenge|what.s.*current/i.test(s)&&/outbound|meeting|calendar/i.test(s)?'Conversational':/outbound|meeting|calendar/i.test(s)?'Informative - with targeted questions':'Informative - no targeted questions'
+  };
+  let pts=0,total=0;
+  Object.values(scores).forEach(sv=>{if(sv==='NA')return;total+=8;if(sv==='Yes'||sv==='Compliant'||sv==='Conversational')pts+=8;else if(sv==='Partial'||sv==='Permission-based'||sv.includes('targeted'))pts+=4;});
+  // Tough mode: stricter scoring
+  if(diff==='hard')pts=Math.round(pts*0.9);
+  const overall=total>0?Math.min(100,Math.round((pts/total)*100)):0;
+  let summary='';
+  if(!convState.booked)summary='You didn\'t book a meeting this call. The close: "Would it make sense to set aside 15 minutes for an Online Conversation with Jan?" Then immediately offer two specific time slots.';
+  else if(scores.open==='No')summary='Great that you booked! But watch your opener — always ask permission first. "May I share why I\'m calling? About 27 seconds. Fair?" It\'s the difference between a great opener and getting hung up on.';
+  else if(overall>=85)summary='Excellent call! You followed KolFil\'s script flow well. This is the level every SDR should aim for. Keep this energy on every live dial — consistency is the key to a full pipeline.';
+  else if(overall>=70)summary='Good call! Review the coaching tips for the red scores above. Drill those exact lines until they feel natural. Progress beats perfection — each rep makes you sharper.';
+  else summary='Keep going. Focus on ONE thing per call — master the opener first, then the value prop, then objections. Use the Objection Drills mode to build faster muscle memory.';
+  return{scores,overall,summary};
+}
+
+function renderScore(data,isNewBest){
+  const sc=data.overall;
+  // Fill share card
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('en-US',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+  const timeStr=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('scName').textContent=sdrName||'SDR';
+  document.getElementById('scTitle').textContent=`${persona?persona.v.charAt(0).toUpperCase()+persona.v.slice(1):''} Cold Call · ${diff.charAt(0).toUpperCase()+diff.slice(1)} Mode`;
+  document.getElementById('scDate').textContent=dateStr+' · '+timeStr;
+  document.getElementById('scCalls').textContent=session.calls;
+  document.getElementById('scDiff').textContent=diff==='easy'?'😊 Warm':diff==='mid'?'😐 Real':'😤 Tough';
+  document.getElementById('scStreak').textContent=session.streak+'🔥';
+  // Color score
+  const scCard=document.getElementById('shareCard');
+  const scBig=document.getElementById('scn');
+  scBig.textContent=sc;
+  const ci=document.getElementById('sci'),sn=document.getElementById('scn');
+  sn.textContent=sc;
+  if(sc>=85){scCard.style.borderColor='var(--green)';scBig.style.color='var(--green)';document.getElementById('sv').textContent='🏆 Excellent Call';}
+  else if(sc>=70){scCard.style.borderColor='var(--gold)';scBig.style.color='var(--gold)';document.getElementById('sv').textContent='📈 Good Call';}
+  else if(sc>=50){scCard.style.borderColor='var(--amber)';scBig.style.color='var(--amber)';document.getElementById('sv').textContent='🎯 Developing';}
+  else{scCard.style.borderColor='var(--red)';scBig.style.color='var(--red)';document.getElementById('sv').textContent='💪 Keep Practicing';}
+
+  const nbDiv=document.getElementById('newBestDiv');
+  if(isNewBest&&sc>0){nbDiv.style.display='';document.getElementById('nbTxt').textContent=`New best: ${sc}/100 — up from ${session.best===sc?'your previous record':session.best}. Screenshot this!`;}
+  else nbDiv.style.display='none';
+
+  const PARAMS=[{k:'open',l:'Opening Script Compliant?'},{k:'callOpen',l:'Call Opening — Timely & Natural?'},{k:'verify',l:'Verifying Info — Name, Title, Company?'},{k:'vp',l:'Value Proposition — 30-second statement?'},{k:'objH',l:'Objection Handling — Effective rebuttal?'},{k:'disc',l:'Discovery Questions — Targeted?'},{k:'apptCl',l:'Appointment Clarity — Date, time, timezone?'},{k:'calInv',l:'Calendar Invite — Sent & confirmed?'},{k:'closing',l:'Closing Spiel — Reschedule instructions?'},{k:'callback',l:'Callback Reminder — Follow-up confirmed?'},{k:'showR',l:'Show Rate Predictability?'},{k:'dialer',l:'Dialer Disposition — Call properly closed?'},{k:'approach',l:'Approach — Conversation Type'}];
+  const posNotes={open:{Compliant:'Soft opener + 27-second permission — exactly right.',
+    'Permission-based':'Asked permission — good. Add the soft opener next time.'},
+    callOpen:{Yes:'Opened promptly and naturally.',Partial:'A bit long — tighten it up.'},
+    verify:{Yes:'Verified who you were speaking with — professional.'},
+    vp:{Yes:'Full value prop + $85K social proof — excellent.',Partial:'Value prop delivered — add the $85K proof next time.'},
+    objH:{Yes:'Acknowledged and redirected — textbook KolFil.',NA:'No objection came up this call.'},
+    disc:{Yes:'Asked discovery questions — builds real rapport.'},
+    apptCl:{Yes:'Clear meeting details confirmed.',Partial:'Meeting booked — confirm specifics next time.'},
+    calInv:{Yes:'Calendar invite handled correctly.',Partial:'Booking confirmed — verify invite landed next time.'},
+    closing:{Yes:'Gave reschedule instructions — professional close.',Partial:'Good close — add the reschedule question next time.'},
+    callback:{Yes:'Callback reminder mentioned — shows follow-through.'},
+    showR:{Yes:'Strong commitment — prospect likely to attend.',Partial:'Moderate engagement.',NA:'No meeting booked.'},
+    dialer:{Yes:'Call closed professionally.',Partial:'Polite close — use the full KolFil sign-off.'},
+    approach:{Conversational:'Discovery + value — fully conversational.',
+      'Informative - with targeted questions':'Good — delivered info and asked some questions.'}};
+
+  const list=document.getElementById('ql');list.innerHTML='';
+  PARAMS.forEach(p=>{
+    const sv=data.scores[p.k];let cls='na';const svl=sv.toLowerCase();
+    if(svl==='yes'||svl==='compliant'||svl==='conversational')cls='yes';
+    else if(svl==='partial'||svl==='permission-based')cls='partial';
+    else if(svl==='no')cls='no';
+    else if(svl.includes('informative'))cls='info';
+    const posNote=(posNotes[p.k]&&posNotes[p.k][sv])||null;
+    const coaching=COACHING[p.k]&&COACHING[p.k][sv]?COACHING[p.k][sv]:null;
+    const row=document.createElement('div');row.className='qr';
+    let html=`<div class="qr-top"><span class="qb ${cls}">${sv}</span><div class="qt"><div class="qp">${p.l}</div>`;
+    if(posNote)html+=`<div class="qn">${posNote}</div>`;
+    html+=`</div></div>`;
+    if(coaching){html+=`<div class="coach-inline"><div style="font-size:14px;flex-shrink:0;margin-top:1px;">🎯</div><div><div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--amber);margin-bottom:4px;">Trainer Feedback</div><div class="coach-body">${coaching.why}</div><div class="coach-script"><strong>KolFil Script:</strong><br>${coaching.script}</div><div class="coach-tip-line">💡 ${coaching.tip}</div></div></div>`;}
+    row.innerHTML=html;list.appendChild(row);
+  });
+  document.getElementById('ctt').textContent=data.summary;
+}
+
+// ══════════════════════
+// RETRY + NEW CALL
+// ══════════════════════
+async function retryCall(){
+  if(!retryPersona)return;
+  persona=retryPersona;
+  hist=[];allSDR=[];msgCount=0;pendingTx='';
+  convState={phase:'greeting',gkPhase:false,gkFailed:0,objDone:false,objHandled:false,booked:false,ended:false};
+  bookingData={used:false,date:null,time:null,email:null,name:null};
+  document.getElementById('chat').innerHTML='';
+  document.getElementById('ql').innerHTML='';
+  
+  if(inputMode==='voice'){document.getElementById('micb').disabled=false;setMS('ready');}
+  document.getElementById('ctm').textContent='00:00';
+  document.querySelectorAll('.ph').forEach(p=>p.className='ph');
+  document.getElementById('pav').textContent=persona.i;document.getElementById('pav').className='pav';
+  document.getElementById('pn').textContent=persona.n;document.getElementById('ps').textContent=`${persona.t} · ${persona.c}`;
+  document.getElementById('csd').className='csd live';document.getElementById('csl').textContent='IN CALL';document.getElementById('csl').className='csl live';
+  updateHint();showSc('call');applyInput();startTmr();callActive=true;
+  const greet=g(persona.greet,diff);
+  addMsg('pro',greet);msgCount++;updPhase();
+  speak(greet,()=>{if(callActive)setMS('ready');});
+}
+
+function newCall(){
+  callActive=false;hist=[];allSDR=[];msgCount=0;synth.cancel();isSpeaking=false;pendingTx='';
+  if(isListen){isListen=false;try{recog.abort();}catch(e){}}
+  convState={phase:'greeting',gkPhase:false,gkFailed:0,objDone:false,objHandled:false,booked:false,ended:false};
+  document.getElementById('chat').innerHTML='';document.getElementById('ql').innerHTML='';
+  document.getElementById('speakBar').classList.remove('show');document.getElementById('hintPanel').classList.remove('show');
+  document.getElementById('hintBtn').classList.remove('on');hintOn=false;
+  const micbEl=document.getElementById('micb');
+  if(micbEl){micbEl.disabled=false;}setMS('ready');
+  document.getElementById('ctm').textContent='00:00';
+  document.querySelectorAll('.ph').forEach(p=>p.className='ph');
+  // Reset booking and lead sheet
+  bookingData={used:false,date:null,time:null,email:null,name:null};
+  const ls=document.getElementById('leadSheet');
+  if(ls)ls.classList.remove('show');
+  const bt=document.getElementById('bookTrigger');
+  if(bt)bt.className='book-trigger';
+  updSessBar();showSc('lobby');
+}
+
+// ══════════════════════
+// DRILL MODE
+// ══════════════════════
+let drillIdx=0,drillCorrect=0,drillTotal=0;
+
+// DRILL VOICE STATE
+let drillInputMode='voice';
+let drillIsListening=false;
+let drillPendingTx='';
+let drillRecog=null;
+
+function setDrillInput(m,btn){}
+
+function initDrillRecog(){
+  if(drillRecog)return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR)return;
+  drillRecog=new SR();
+  drillRecog.continuous=true;drillRecog.interimResults=true;drillRecog.lang='en-US';
+  drillRecog.onresult=(e)=>{let f='';for(let i=0;i<e.results.length;i++)f+=e.results[i][0].transcript+' ';drillPendingTx=f.trim();document.getElementById('drillLtx').textContent=drillPendingTx;};
+  drillRecog.onerror=(e)=>{if(e.error!=='no-speech')console.warn(e.error);};
+  drillRecog.onend=()=>{if(drillIsListening)try{drillRecog.start();}catch(ex){}};
+}
+
+function togDrillHint(){
+  const panel = document.getElementById('drillHintPanel');
+  const btn = document.getElementById('drillHintBtn');
+  if(!panel || !btn) return;
+  const isOpen = panel.classList.contains('show');
+  if(!isOpen){
+    // First time opening — mark as used and inject drill-specific hint
+    if(!drillHintUsed){
+      drillHintUsed = true;
+      drillHintsTotal++;
+      btn.innerHTML = '👀 Answer Peeked! 🕵️ Max score: Good';
+      btn.classList.add('used');
+    }
+    // Inject the SPECIFIC perfect response into the hint panel
+    const d = drillList && drillList[drillIdx] ? drillList[drillIdx] : null;
+    const specificEl = document.getElementById('drillHintSpecific');
+    if(specificEl && d){
+      specificEl.innerHTML =
+        '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:6px;">💡 For THIS objection — use this structure:</div>' +
+        '<div style="font-size:12px;color:var(--text);line-height:1.7;font-style:italic;background:rgba(240,180,41,.06);border-left:2px solid var(--gold);padding:8px 12px;border-radius:0 6px 6px 0;">' +
+        d.perfect + '</div>' +
+        '<div style="font-size:10px;color:var(--text2);margin-top:6px;">⚠️ Memorize the structure — do not read it word for word next time.</div>';
+    }
+    panel.classList.add('show');
+  } else {
+    panel.classList.remove('show');
+  }
+}
+
+function togDrillMic(){
+  if(drillIsListening)stopDrillMic();
+  else startDrillMic();
+}
+
+function startDrillMic(){
+  initDrillRecog();
+  if(!drillRecog){alert('Voice requires Chrome or Edge.');return;}
+  drillIsListening=true;drillPendingTx='';
+  document.getElementById('drillLtx').textContent='Listening...';
+  try{drillRecog.abort();}catch(e){}
+  setTimeout(()=>{try{drillRecog.start();}catch(e){}},100);
+  const b=document.getElementById('drillMicBtn');
+  b.textContent='⏹';b.style.background='var(--red)';b.style.borderColor='var(--red)';
+  document.getElementById('drillMicSt').textContent='Speaking... tap ⏹ when done';
+}
+
+function stopDrillMic(){
+  drillIsListening=false;
+  try{drillRecog.abort();}catch(e){}
+  const text=drillPendingTx.trim();
+  drillPendingTx='';
+  document.getElementById('drillLtx').textContent=' ';
+  const b=document.getElementById('drillMicBtn');
+  b.textContent='🎤';b.style.background='';b.style.borderColor='';
+  document.getElementById('drillMicSt').textContent='Tap mic to respond';
+  if(text)submitDrillResponse(text);
+}
+
+function submitDrillText(){ /* voice only */ }
+
+function readObjAloud(text){
+  if(!synth)return;
+  synth.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  if(vMale)u.voice=vMale;
+  u.rate=1.0;u.pitch=0.95;
+  synth.speak(u);
+}
+
+function startDrill(){
+  drillIdx=0;drillCorrect=0;drillTotal=0;
+  drillHintUsed=false;drillHintsTotal=0;drillHintAndMiss=0;
+  // Copy DRILLS to drillList — NEVER mutate the original
+  drillList=DRILLS.slice();
+  // Shuffle drillList
+  for(let i=drillList.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [drillList[i],drillList[j]]=[drillList[j],drillList[i]];
+  }
+  // Take up to 40
+  if(drillList.length>40)drillList=drillList.slice(0,40);
+  showSc('drill');
+  // Reset voice state
+  drillIsListening=false;drillPendingTx='';
+  if(drillRecog)try{drillRecog.abort();}catch(e){}
+  loadDrill();
+}
+
+function loadDrill(){
+  if(!drillList||drillIdx>=drillList.length){showDrillDone();return;}
+  const d=drillList&&drillList[drillIdx]?drillList[drillIdx]:DRILLS[drillIdx];
+  document.getElementById('drillObjTxt').textContent=d.obj;
+  // drillInp removed (voice only)
+  document.getElementById('drillResult').className='drill-result';
+  document.getElementById('drillDone').className='drill-done';
+  document.getElementById('dpCount').textContent=`Drill ${drillIdx+1} of ${drillList?drillList.length:DRILLS.length}`;
+  // Read objection aloud after short delay
+  setTimeout(()=>readObjAloud(d.obj),300);
+  // Reset mic button
+  const mb=document.getElementById('drillMicBtn');
+  if(mb){mb.textContent='🎤';mb.style.background='';mb.style.borderColor='';}
+  document.getElementById('drillMicSt').textContent='Tap mic to respond';
+  document.getElementById('drillLtx').textContent=' ';
+  document.getElementById('dpScore').textContent=`Score: ${drillCorrect} / ${drillTotal}`;
+  document.getElementById('dpBar').style.width=`${Math.round((drillTotal/DRILLS.length)*100)}%`;
+  // Always pre-load the CORRECT specific hint for this drill
+  var hintSpec=document.getElementById('drillHintSpecific');
+  if(hintSpec&&d){
+    hintSpec.innerHTML='<div style="font-size:9px;font-weight:700;text-transform:uppercase;'+
+    'letter-spacing:2px;color:var(--gold);margin-bottom:6px;">For THIS objection:</div>'+
+    '<div style="font-size:12px;color:var(--text);line-height:1.7;background:rgba(240,180,41,.06);'+
+    'border-left:2px solid var(--gold);padding:8px 12px;border-radius:0 6px 6px 0;font-style:italic;">'+
+    d.perfect+'</div>'+
+    '<div style="font-size:10px;color:var(--text2);margin-top:5px;">Memorize the structure — do not read word for word.</div>';
+  }
+  // Read objection aloud
+  setTimeout(()=>readObjAloud(d.obj),400);
+}
+
+function submitDrill(){}  // legacy - kept for compatibility
+
+function submitDrillResponse(txt){
+  const tl = txt.toLowerCase().trim();
+  const d = drillList && drillList[drillIdx] ? drillList[drillIdx] : DRILLS[drillIdx];
+  if(!d) return;
+
+  // ─── KOLFIL CORE STRUCTURE CHECKER ───
+  // A good KolFil objection handle MUST have these 3 pillars:
+  // PILLAR 1 — ACKNOWLEDGE: Did they receive the objection first?
+  const ACKNOWLEDGE = [
+    'by no means','not expecting','completely understand','i understand',
+    'i hear you','i appreciate that','totally fair','that is fair',
+    'fair enough','completely fair','i get that','i can see why',
+    'that makes sense','valid concern','appreciate you','i hear that',
+    'understandable','makes total sense','that is understandable'
+  ];
+
+  // PILLAR 2 — REDIRECT: Did they offer a soft bridge or introduce KolFil?
+  const REDIRECT = [
+    'only hoping to introduce','hoping to introduce ourselves',
+    'introduce ourselves','when the timing is right','for when the time',
+    'so you know who we are','at least you know','top of mind',
+    'be on your radar','not a priority','down the road',
+    'next quarter','when you are ready','when timing','right time',
+    'that is exactly why','that experience is why','that is the reason',
+    'that is actually why','and that is why','difference is'
+  ];
+
+  // PILLAR 3 — ASK: Did they close with a soft question?
+  const ASK = [
+    'would you be opposed','open to','10 minutes','15 minutes',
+    'quick call','find 10','find 15','set aside','would it be crazy',
+    'totally crazy','crazy idea','would it make sense',
+    'could we find','can i put','brief call','schedule a',
+    'set up a call','connect with jan','introduce you to jan',
+    'speak with jan','chat with jan'
+  ];
+
+  // BONUS — Results/Proof mentioned
+  const PROOF = [
+    '85','85,000','eighty five','six figure','net new','proven',
+    'similar clients','track record','results','96 dollar','96 per',
+    'per day','guaranteed meetings','icp','structured process',
+    'scripts','accountability','performance'
+  ];
+
+  // Check each pillar
+  const hitP1 = ACKNOWLEDGE.filter(p => tl.includes(p));
+  const hitP2 = REDIRECT.filter(p => tl.includes(p));
+  const hitP3 = ASK.filter(p => tl.includes(p));
+  const hitBonus = PROOF.filter(p => tl.includes(p));
+
+  // Also check drill-specific keywords
+  const keyHits = d.keys.filter(k => tl.includes(k.toLowerCase()));
+  const keyPct = keyHits.length / Math.max(d.keys.length, 1);
+
+  // SCORING RULES — strict but fair:
+  // EXCELLENT: All 3 pillars hit (acknowledge + redirect + ask)
+  //            OR 2 pillars + 40%+ keyword hits
+  // GOOD:      At least 2 pillars hit
+  //            OR 1 pillar + 30%+ keyword hits
+  //            OR 40%+ keyword hits alone
+  // MISS:      1 or fewer pillar AND under 30% keywords
+
+  const pillarsHit = (hitP1.length>0?1:0)+(hitP2.length>0?1:0)+(hitP3.length>0?1:0);
+
+  let tier = 'miss';
+  if(pillarsHit >= 3 || (pillarsHit >= 2 && keyPct >= 0.4)) tier = 'excellent';
+  else if(pillarsHit >= 2 || (pillarsHit >= 1 && keyPct >= 0.3) || keyPct >= 0.4) tier = 'good';
+
+  // ── CHEATER TAX ── if hint was used, max score is 'good'
+  let cheated = false;
+  if(drillHintUsed && tier === 'excellent'){
+    tier = 'good';
+    cheated = true;
+  }
+  if(drillHintUsed && tier === 'miss'){
+    drillHintAndMiss++;
+  }
+  const correct = tier !== 'miss';
+  drillTotal++; if(correct) drillCorrect++;
+
+  // Disable inputs
+  const mb=document.getElementById('drillMicBtn');
+  if(mb){ mb.disabled = true; mb.style.opacity = '.4'; }
+
+  // Show result
+  const res = document.getElementById('drillResult');
+  if(res){
+    res.className = 'drill-result show';
+    res.style.background = tier==='excellent'?'var(--green-dim)':tier==='good'?'var(--amber-dim)':'var(--red-dim)';
+    res.style.border = tier==='excellent'?'1px solid rgba(46,204,113,.3)':
+                       tier==='good'?'1px solid rgba(255,179,71,.3)':'1px solid rgba(255,82,82,.3)';
+  }
+
+  const ico = tier==='excellent'?'🏆':tier==='good'?'📈':'❌';
+  const color = tier==='excellent'?'var(--green)':tier==='good'?'var(--amber)':'var(--red)';
+  let msg = tier==='excellent'?'Excellent! All 3 KolFil pillars hit.':
+            tier==='good'?'Getting there — missing some key structure:':
+            'Not quite — KolFil structure was missing. Study this:';
+  if(cheated && tier==='good') msg = '📈 Good — but you peeked! 👀 No Excellent with hints. Try clean!';
+  if(drillHintUsed && tier==='miss') msg = '❌ You peeked AND still missed. Study this one extra carefully! 😅';
+
+  // Build pillar breakdown
+  const p1txt = hitP1.length>0?'<span style="color:var(--green)">✅ Acknowledge</span>':'<span style="color:var(--red)">❌ Acknowledge</span>';
+  const p2txt = hitP2.length>0?'<span style="color:var(--green)">✅ Redirect</span>':'<span style="color:var(--red)">❌ Redirect</span>';
+  const p3txt = hitP3.length>0?'<span style="color:var(--green)">✅ Ask/Book</span>':'<span style="color:var(--red)">❌ Ask/Book</span>';
+  const bonustxt = hitBonus.length>0?'<span style="color:var(--gold)"> +Proof</span>':'';
+
+  const pillarsHTML = '<div style="font-size:10px;margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;">'+p1txt+p2txt+p3txt+bonustxt+'</div>';
+
+  // Missing tips
+  const tips = [];
+  if(!hitP1.length) tips.push('"By no means were we expecting this to be a priority..."');
+  if(!hitP2.length) tips.push('"...only hoping to introduce ourselves for when the timing was right."');
+  if(!hitP3.length) tips.push('"Would you be opposed to finding 10 minutes tomorrow?"');
+  const tipsHTML = tips.length>0?'<div style="font-size:10px;color:var(--amber);margin-top:4px;">Missing: '+tips.slice(0,2).join(' / ')+'</div>':'';
+
+  const yourResp = txt.length>80?txt.slice(0,80)+'...':txt;
+  const drTop = document.getElementById('drTop');
+  if(drTop) drTop.innerHTML = '<div class="dr-ico">'+ico+'</div><div style="flex:1"><div class="dr-verdict" style="color:'+color+'">'+msg+'</div>'+pillarsHTML+tipsHTML+'</div><div class="dr-your" style="width:100%;margin-top:5px;font-size:11px;color:var(--text2);">You said: "'+yourResp+'"</div>';
+
+  const drP = document.getElementById('drPerfect');
+  if(drP) drP.textContent = d.perfect;
+
+  setTimeout(()=>readObjAloud(d.perfect), 600);
+
+  const btn = document.getElementById('drillNext');
+  if(btn){
+    btn.textContent = drillIdx+1<drillList.length?'Next Objection →':'See My Score →';
+    btn.className = 'drill-next '+(tier==='miss'?'wrong':tier==='good'?'partial':'correct');
+  }
+  session.drills++; updSessBar();
+}
+
+function nextDrill(){
+  drillIdx++;
+  // Stop any ongoing speech
+  if(synth)synth.cancel();
+  if(drillIsListening)stopDrillMic();
+  // Re-enable inputs
+  // voice only — no text inputs to re-enable
+  const mb=document.getElementById('drillMicBtn');
+  if(mb){mb.disabled=false;mb.style.opacity='';}
+  loadDrill();
+}
+function hkDrill(e){}
+
+function showDrillDone(){
+  document.getElementById('drillDone').className='drill-done show';
+  const pct=Math.round((drillCorrect/40)*100);
+  document.getElementById('ddScore').textContent=`${drillCorrect}/40`;
+  document.getElementById('ddLbl').textContent=pct>=85?'🔥 Objection master! You are ready for live calls.':pct>=70?'📈 Great work! Review the ones you missed and drill again.':pct>=50?'📈 Good progress! Keep drilling — aim for 35+/40.':'💪 Keep going! Listen to the perfect responses and try again.';
+  if(synth)synth.cancel();
+  document.getElementById('dpScore').textContent=`Final: ${drillCorrect} / ${DRILLS.length}`;
+  document.getElementById('dpBar').style.width='100%';
+}
+
+function exitDrill(){
+  if(synth)synth.cancel();
+  if(drillIsListening)stopDrillMic();
+  showSc('lobby');updSessBar();
+}
+
+// ═══════════════════════════════
+// LEAD DATA
+// ═══════════════════════════════
+var leadData = null;
+var bookingData = { used:false, date:null, time:null, email:null, name:null };
+var calCurrentDate = new Date();
+var calSelectedDay = null;
+var calSelectedTime = null;
+
+function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+
+function generateLead(persona) {
+  var parts = persona.n.split(' ');
+  var first = parts[0].toLowerCase();
+  var last = (parts[1]||'smith').toLowerCase().replace(/[^a-z]/g,'');
+  var co = persona.c.toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,12);
+  var domain = co + '.com';
+  var email = first + '.' + last + '@' + domain;
+  var phone = '+1 (' + randInt(212,999) + ') ' + randInt(200,999) + '-' + (''+randInt(1000,9999));
+  var revMap = {
+    tech:['$2M - $10M','$10M - $50M','$50M - $200M','$200M+'],
+    staffing:['$5M - $20M','$20M - $75M','$75M - $300M'],
+    industrial:['$10M - $50M','$50M - $200M','$200M - $1B']
+  };
+  var staffMap = {
+    tech:['10 - 50','50 - 200','200 - 500','500+'],
+    staffing:['20 - 75','75 - 250','250 - 500'],
+    industrial:['50 - 200','200 - 500','500 - 2000']
+  };
+  var descMap = {
+    tech:'B2B SaaS company focused on helping mid-market and enterprise teams streamline their go-to-market operations. Currently scaling their outbound sales motion and expanding into new verticals.',
+    staffing:'Full-service IT staffing and talent solutions firm specializing in placing technical professionals at high-growth companies. Growing their book of business across multiple industries.',
+    industrial:'Manufacturing and industrial solutions provider serving OEMs and procurement teams in the automation space. Expanding their B2B client footprint beyond their current trade show-dependent model.'
+  };
+  var rv = revMap[persona.v]||revMap.tech;
+  var st = staffMap[persona.v]||staffMap.tech;
+  return {
+    name: persona.n, title: persona.t, company: persona.c, init: persona.i,
+    email: email, phone: phone, website: 'www.' + domain,
+    linkedIn: 'linkedin.com/in/' + first + '-' + last,
+    revenue: rv[Math.floor(Math.random()*rv.length)],
+    staff: st[Math.floor(Math.random()*st.length)],
+    vertical: persona.v.charAt(0).toUpperCase()+persona.v.slice(1),
+    desc: descMap[persona.v]||descMap.tech
+  };
+}
+
+function showLeadCard() {
+  var d = leadData;
+  var diffLabels = { easy:'😊 Warm Mode', mid:'😐 Realistic Mode', hard:'😤 Tough Mode' };
+  var el = function(id){ return document.getElementById(id); };
+  if(el('lcDiff')) el('lcDiff').textContent = diffLabels[diff]||diff;
+  if(el('lcAvatar')) el('lcAvatar').textContent = d.init;
+  if(el('lcName')) el('lcName').textContent = d.name;
+  if(el('lcTitleCo')) el('lcTitleCo').textContent = d.title + ' · ' + d.company;
+  if(el('lcEmail')) el('lcEmail').textContent = d.email;
+  if(el('lcPhone')) el('lcPhone').textContent = d.phone;
+  if(el('lcWebsite')) el('lcWebsite').textContent = d.website;
+  if(el('lcRevenue')) el('lcRevenue').textContent = d.revenue;
+  if(el('lcStaff')) el('lcStaff').textContent = d.staff;
+  if(el('lcVertical')) el('lcVertical').textContent = d.vertical;
+  if(el('lcLinkedIn')) el('lcLinkedIn').textContent = d.linkedIn;
+  if(el('lcDesc')) el('lcDesc').textContent = d.desc;
+  if(el('lcNameBtn')) el('lcNameBtn').textContent = d.name;
+  showSc('leadcard');
+}
+
+// ═══════════════════════════════
+// CALENDAR
+// ═══════════════════════════════
+var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+var TIME_SLOTS = ['6:00 AM','6:30 AM','7:00 AM','7:30 AM','8:00 AM','8:30 AM','9:00 AM','9:30 AM','10:00 AM','10:30 AM','11:00 AM','11:30 AM','12:00 PM','12:30 PM','1:00 PM','1:30 PM','2:00 PM','2:30 PM','3:00 PM','3:30 PM','4:00 PM','4:30 PM'];
+
+function openCalendar() {
+  var btn = document.getElementById('bookTriggerBtn');
+  if(btn && btn.classList.contains('used')) return;
+  calCurrentDate = new Date();
+  calSelectedDay = null; calSelectedTime = null;
+  var sw = document.getElementById('calSlotsWrap');
+  var cw = document.getElementById('calConfirmWrap');
+  var cs = document.getElementById('calSuccess');
+  if(sw) sw.style.display = 'none';
+  if(cw) cw.style.display = 'none';
+  if(cs) cs.style.display = 'none';
+  renderCalendar();
+  var overlay = document.getElementById('calOverlay');
+  if(overlay) overlay.classList.add('show');
+}
+
+function closeCalendar() {
+  var overlay = document.getElementById('calOverlay');
+  if(overlay) overlay.classList.remove('show');
+}
+
+function renderCalendar() {
+  var y = calCurrentDate.getFullYear();
+  var m = calCurrentDate.getMonth();
+  var title = document.getElementById('calMonthTitle');
+  if(title) title.textContent = MONTHS[m] + ' ' + y;
+  var grid = document.getElementById('calGrid');
+  if(!grid) return;
+  grid.innerHTML = '';
+  var today = new Date();
+  var firstDay = new Date(y, m, 1).getDay();
+  var daysInMonth = new Date(y, m+1, 0).getDate();
+  // Empty cells
+  for(var i=0; i<firstDay; i++) {
+    var empty = document.createElement('div');
+    empty.className = 'cal-day empty';
+    grid.appendChild(empty);
+  }
+  for(var d=1; d<=daysInMonth; d++) {
+    var dayEl = document.createElement('div');
+    var thisDate = new Date(y, m, d);
+    var dow = thisDate.getDay();
+    var isPast = thisDate < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    var isToday = thisDate.toDateString() === today.toDateString();
+    var isWeekend = dow === 0 || dow === 6;
+    if(isPast) dayEl.className = 'cal-day past';
+    else if(isWeekend) dayEl.className = 'cal-day weekend';
+    else if(isToday) dayEl.className = 'cal-day today available';
+    else dayEl.className = 'cal-day available';
+    dayEl.textContent = d;
+    if(!isPast && !isWeekend) {
+      (function(day, date) {
+        dayEl.onclick = function() { selectCalDay(day, date); };
+      })(d, thisDate);
+    }
+    grid.appendChild(dayEl);
+  }
+}
+
+function selectCalDay(day, date) {
+  calSelectedDay = date; calSelectedTime = null;
+  document.querySelectorAll('.cal-day').forEach(function(d){ d.classList.remove('selected'); });
+  event.target.classList.add('selected');
+  var sw = document.getElementById('calSlotsWrap');
+  var cw = document.getElementById('calConfirmWrap');
+  if(sw) sw.style.display = '';
+  if(cw) cw.style.display = 'none';
+  var title = document.getElementById('calSlotsTitle');
+  var dayName = DAYS[date.getDay()];
+  var monthName = MONTHS[date.getMonth()];
+  if(title) title.textContent = dayName + ', ' + monthName + ' ' + day;
+  var sGrid = document.getElementById('calSlotsGrid');
+  if(!sGrid) return;
+  sGrid.innerHTML = '';
+  var today = new Date();
+  var isToday = date.toDateString() === today.toDateString();
+  TIME_SLOTS.forEach(function(t) {
+    var slotEl = document.createElement('div');
+    slotEl.className = 'cal-slot';
+    slotEl.textContent = t;
+    if(isToday) {
+      // Disable past times for today
+      var slotHour = parseInt(t.split(':')[0]) + (t.includes('PM') && !t.includes('12:') ? 12 : 0);
+      if(slotHour <= today.getHours()) {
+        slotEl.style.opacity = '.3';
+        slotEl.style.pointerEvents = 'none';
+        sGrid.appendChild(slotEl);
+        return;
+      }
+    }
+    slotEl.onclick = function() { selectCalTime(t, this); };
+    sGrid.appendChild(slotEl);
+  });
+}
+
+function selectCalTime(time, el) {
+  calSelectedTime = time;
+  document.querySelectorAll('.cal-slot').forEach(function(s){ s.classList.remove('selected'); });
+  el.classList.add('selected');
+  var cw = document.getElementById('calConfirmWrap');
+  if(cw) cw.style.display = '';
+  var dayName = DAYS[calSelectedDay.getDay()];
+  var monthName = MONTHS[calSelectedDay.getMonth()];
+  var confDate = document.getElementById('confDate');
+  var confTime = document.getElementById('confTime');
+  var confName = document.getElementById('confName');
+  var confEmail = document.getElementById('confEmail');
+  var confComp = document.getElementById('confCompany');
+  if(confDate) confDate.textContent = dayName + ', ' + monthName + ' ' + calSelectedDay.getDate() + ', ' + calSelectedDay.getFullYear();
+  if(confTime) confTime.textContent = time + ' (America/Manila)';
+  // Pre-fill from lead data
+  if(leadData) {
+    if(confName) confName.value = leadData.name;
+    if(confEmail) confEmail.value = leadData.email;
+    if(confComp) confComp.value = leadData.company;
+  }
+  cw.scrollIntoView({ behavior:'smooth' });
+}
+
+function sendCalInvite() {
+  var nameEl = document.getElementById('confName');
+  var emailEl = document.getElementById('confEmail');
+  var compEl = document.getElementById('confCompany');
+  var email = emailEl ? emailEl.value.trim() : '';
+  var name = nameEl ? nameEl.value.trim() : '';
+  if(!email || !calSelectedDay || !calSelectedTime) {
+    if(emailEl) { emailEl.style.borderColor = 'var(--red)'; setTimeout(function(){ emailEl.style.borderColor = ''; }, 2000); }
+    return;
+  }
+  // Record booking
+  bookingData.used = true;
+  bookingData.date = calSelectedDay;
+  bookingData.time = calSelectedTime;
+  bookingData.email = email;
+  bookingData.name = name;
+  // Show success
+  var cw = document.getElementById('calConfirmWrap');
+  var cs = document.getElementById('calSuccess');
+  if(cw) cw.style.display = 'none';
+  if(cs) cs.style.display = '';
+  var dayName = DAYS[calSelectedDay.getDay()];
+  var monthName = MONTHS[calSelectedDay.getMonth()];
+  var dateStr = dayName + ', ' + monthName + ' ' + calSelectedDay.getDate();
+  var msg = document.getElementById('calSuccessMsg');
+  if(msg) msg.textContent = ["Calendar invite sent to ", email, " for ", dateStr, " at ", calSelectedTime, ". The meeting appears on Jan calendar as a 15-Minute Synergy and Strategy Call."].join("");
+  // Update book button
+  var btn = document.getElementById('bookTriggerBtn');
+  if(btn) { btn.classList.add('used'); btn.textContent = '✅ Meeting booked — ' + dateStr + ' at ' + calSelectedTime; }
+  // Add confirmation message in chat
+  var dateMsg = dateStr + ' at ' + calSelectedTime;
+  addMsg('sys', '📅 Calendar invite sent to ' + email + ' · ' + dateMsg + ' · 15-Min Synergy & Strategy Call · Google Meet');
+}
+
+function calPrevMonth() {
+  calCurrentDate = new Date(calCurrentDate.getFullYear(), calCurrentDate.getMonth()-1, 1);
+  calSelectedDay = null; calSelectedTime = null;
+  var sw = document.getElementById('calSlotsWrap');
+  var cw = document.getElementById('calConfirmWrap');
+  if(sw) sw.style.display = 'none';
+  if(cw) cw.style.display = 'none';
+  renderCalendar();
+}
+function calNextMonth() {
+  calCurrentDate = new Date(calCurrentDate.getFullYear(), calCurrentDate.getMonth()+1, 1);
+  calSelectedDay = null; calSelectedTime = null;
+  var sw = document.getElementById('calSlotsWrap');
+  var cw = document.getElementById('calConfirmWrap');
+  if(sw) sw.style.display = 'none';
+  if(cw) cw.style.display = 'none';
+  renderCalendar();
+}
+
+
+function togLeadSheet(){
+  var body=document.getElementById('lsBody');
+  var arrow=document.getElementById('lsArrow');
+  if(!body)return;
+  body.classList.toggle('open');
+  if(arrow)arrow.classList.toggle('open');
+}
+
+function populateLeadSheet(){
+  if(!leadData)return;
+  var el=function(id){return document.getElementById(id);};
+  var ls=document.getElementById('leadSheet');
+  if(ls)ls.classList.add('show');
+  if(el('lsNameTag'))el('lsNameTag').textContent=leadData.name;
+  if(el('lsEmail'))el('lsEmail').textContent=leadData.email;
+  if(el('lsPhone'))el('lsPhone').textContent=leadData.phone;
+  if(el('lsWebsite'))el('lsWebsite').textContent=leadData.website;
+  if(el('lsRevenue'))el('lsRevenue').textContent=leadData.revenue;
+  if(el('lsStaff'))el('lsStaff').textContent=leadData.staff;
+  if(el('lsVertical'))el('lsVertical').textContent=leadData.vertical;
+  // Pain point from persona
+  if(el('lsPain'))el('lsPain').textContent=persona?persona.pain:'—';
+  // Auto open the sheet
+  var body=document.getElementById('lsBody');
+  var arrow=document.getElementById('lsArrow');
+  if(body)body.classList.add('open');
+  if(arrow)arrow.classList.add('open');
+}
+
+
+// ═══ TERMS OF USE ═══
+function acceptTerms(){
+  document.getElementById('termsOv').style.display='none';
+  try{localStorage.setItem('kolfil_terms_v1','accepted');}catch(e){}
+}
+window.addEventListener('DOMContentLoaded',function(){
+  try{
+    if(localStorage.getItem('kolfil_terms_v1')==='accepted'){
+      document.getElementById('termsOv').style.display='none';
+    }
+  }catch(e){}
+});
+
+// ═══ POST-BOOKING CLOSING SPIEL PHRASES ═══
+var POST_BOOK_REPLIES = {
+  hasFollowUp: ['Sure, a reminder works — appreciate that.','That is helpful, thank you.','I appreciate the heads up.'],
+  hasReschedule: ['Got it — I will reach out if anything changes.','Will do.','I have your number, thanks.'],
+  hasBoth: ['Perfect — sounds great. I appreciate that.','Great — I will keep that in mind.','Sounds good. Thank you.'],
+  hasSignoff: ['Wonderful! Looking forward to it!','Talk soon — have a great day!','Looking forward to the conversation. Bye!'],
+  neutral: ['Sounds good.','Got it.','Appreciate it.']
+};
+
+// ═══ RESTORE 40 DRILLS ═══
+DRILLS = [
+  {obj:'I am not sure if we need this right now.',keys:['by no means','not expecting','hoping to introduce','timing','would you be opposed','10 minute','15 minute'],perfect:'By no means were we expecting this to be a priority — we were only hoping to introduce ourselves for when the timing was right. Would you be opposed to finding 10 minutes tomorrow to walk through how we have helped similar clients get qualified meetings weekly?'},
+  {obj:'We already have a provider for this.',keys:['by no means','timing','introduce','awesome','opposed'],perfect:'That is awesome! By no means were we expecting this to be a priority — only hoping to introduce ourselves for when the timing was right. Would you be opposed to 10 minutes to walk through how we complement existing setups?'},
+  {obj:'I am not interested.',keys:['by no means','not expecting','timing','opposed','10 minute','introduce'],perfect:'By no means were we expecting this to be a priority — we were only hoping to introduce ourselves for when the timing was right. Would you be opposed to finding 10 minutes tomorrow to see our proven process?'},
+  {obj:'I am in a meeting right now.',keys:['quick','call','afternoon','when','leads','clients'],perfect:'Oops! I will be very quick — when can I call this afternoon to discuss a process that complements your current setup? How do you currently generate your leads or get in front of potential clients?'},
+  {obj:'I am not the right person for this.',keys:['understand','title','would it be','introduce','jan','15 years'],perfect:'I completely understand — and that is actually why I am reaching out to you. Would it be crazy for me to quickly introduce you to Jan? He has been in the industry for over 15 years and can share exactly how we work.'},
+  {obj:'Can you just send me an email?',keys:['absolutely','what type','big ask','placeholder','calendar','decline','fair'],perfect:'Absolutely — what type of email do you wish to see? But here is my big ask: Can I put a placeholder on your calendar? If you love the email we will keep the meeting. If it does not make sense you can simply decline it. Fair?'},
+  {obj:'We tried cold calling before and it did not work.',keys:['understand','different','structured','results','proven','similar clients','icp'],perfect:'I completely understand — and that experience is actually the reason why you need our structured process. The difference is we align specifically with your ICP and run proven scripts. Would you be opposed to 10 minutes to see how we have gotten results for similar clients?'},
+  {obj:'How much does it cost?',keys:['different','tiers','solution','jan','96','day','meeting','accurate'],perfect:'Great question! We have different solutions for each client. What I do know is 96 dollars per SDR per day with at least 3 meetings set per week. A quick chat with Jan will give you the accurate pricing based on what you actually need. Can I set that up?'},
+  {obj:'We handle all our sales development in house.',keys:['awesome','complement','alongside','additional','capacity','opposed'],perfect:'That is awesome — and we actually work best alongside in-house teams. We handle the top of funnel so your team focuses purely on closing. Would you be opposed to 10 minutes to see how we complement internal teams?'},
+  {obj:'We are currently locked into a contract with another vendor.',keys:['timing','introduce','right time','when','expires','future','opposed'],perfect:'By no means were we expecting this to be a priority right now — only hoping to introduce ourselves for when the timing was right. When does your current contract expire? Would it be crazy to put a placeholder for when you are in a better position to evaluate?'},
+  {obj:'Our budget is really tight right now.',keys:['understand','timing','96','roi','meetings','pipeline','introduce','opposed'],perfect:'I completely understand — and honestly that is exactly why our model makes sense. At 96 dollars per SDR per day with guaranteed meetings, you only pay for performance. Would you be opposed to 10 minutes with Jan to see if the numbers actually work for you?'},
+  {obj:'We are not looking to add any new vendors right now.',keys:['by no means','timing','introduce','opposed','10 minute'],perfect:'By no means were we expecting this to be a priority — only hoping to introduce ourselves for when the timing was right. Would you be opposed to a quick 10-minute introduction so that when the time is right, you already know exactly who we are?'},
+  {obj:'I need to talk to my CEO or partner before moving forward.',keys:['understand','introduce','jan','both','meeting','include','together'],perfect:'I completely understand — and that is the exact right approach. What if we set up a quick 15-minute call that includes both of you and Jan? That way everyone gets the full picture at once. Would that work?'},
+  {obj:'We get all of our business through referrals.',keys:['awesome','complement','predictable','scale','referrals','pipeline','supplement','opposed'],perfect:'That is awesome — referrals are the best kind of business. The challenge is referrals are unpredictable and hard to scale. We complement your referral network by creating a consistent predictable pipeline on top of it. Would you be opposed to 10 minutes?'},
+  {obj:'Can you call me back next quarter?',keys:['absolutely','placeholder','calendar','remind','timing','note','follow up'],perfect:'Absolutely — I will make a note. But before I let you go, can I put a quick placeholder on your calendar for next quarter so it does not get lost? I will call to confirm when the time comes. Fair?'},
+  {obj:'We are in our peak season and too busy right now.',keys:['understand','after','when slows','placeholder','introduce','before'],perfect:'I completely understand — and that is actually why this call makes sense. When peak season ends you will want a full pipeline ready. Can I put a placeholder for when things slow down so we are set up and ready the moment you need us?'},
+  {obj:'We do not have the bandwidth to manage another vendor.',keys:['understand','fully managed','no management','we do the work','hands off','opposed'],perfect:'I completely understand — and the great news is we are fully managed on our end. We handle everything: the calling, the scripts, the dispositions, the reporting. Your team just shows up to the booked meetings. Would you be opposed to 10 minutes?'},
+  {obj:'We have been burned by agencies before.',keys:['understand','different','performance','results','guaranteed','meetings','icp','proven'],perfect:'I hear you — and that experience is exactly why I want you to talk to Jan directly. He will walk you through exactly what makes us different: ICP-aligned calling, proven scripts, and performance accountability. Would you be opposed to 10 minutes?'},
+  {obj:'We are not in growth mode right now.',keys:['understand','timing','introduce','right time','when','placeholder','opposed'],perfect:'Completely understood — by no means were we expecting this to be a priority right now. We were only hoping to introduce ourselves for when the timing is right. Would you be opposed to a quick introduction so you know who to call when you are ready to grow?'},
+  {obj:'I do not know enough about your company to have this conversation.',keys:['fair','27 seconds','quick','kolfil','meetings','calendar','icp'],perfect:'That is completely fair — let me give you the 27-second version. KolFil books Sales Qualified Meetings directly to your calendar through outbound calling within your ICP. Last month we helped a client close 85 thousand dollars in net new business purely from outbound. Worth 10 minutes to explore?'},
+  {obj:'Our sales team already does their own prospecting.',keys:['awesome','complement','closers','close','prospecting','focus','pipeline','opposed'],perfect:'That is awesome — and our best clients are exactly like that. The question is whether your closers should be spending time prospecting or closing. We handle the prospecting so your team focuses 100 percent on closing deals. Would you be opposed to 10 minutes?'},
+  {obj:'We rely mostly on inbound and it has been working great.',keys:['awesome','supplement','predictable','scale','inbound','dependent','pipeline','consistent'],perfect:'That is great to hear — inbound is powerful. The challenge is inbound is unpredictable and hard to scale. We create a consistent outbound pipeline that supplements your inbound so you are never dependent on one source. Would you be opposed to 10 minutes?'},
+  {obj:'We are focused on product development right now not sales.',keys:['understand','timing','introduce','when ready','placeholder','pipeline','before launch'],perfect:'Completely understood — and actually the best time to build your pipeline is before you are ready to scale. Would you be opposed to a quick introduction now so that when you flip the switch on sales, you already have a proven outbound engine ready to go?'},
+  {obj:'Our deal sizes are too high for cold calling to work.',keys:['understand','senior','decision makers','executive','qualified','icp','15 minutes'],perfect:'I completely understand — and that is exactly why KolFil targets senior decision makers within your specific ICP. We do not spray and pray. We call the right people with the right message at the right level. Would you be opposed to 10 minutes with Jan?'},
+  {obj:'We already have a full SDR team.',keys:['awesome','complement','additional','capacity','alongside','overflow','ramp','opposed'],perfect:'That is awesome — and we work extremely well alongside internal SDR teams. We handle overflow, new verticals, or campaigns your team does not have bandwidth for. Would you be opposed to 10 minutes to see how we complement rather than replace your team?'},
+  {obj:'Our recruiters already handle business development.',keys:['understand','billable','focus','recruiting','placements','complement','opposed'],perfect:'I completely understand — and the question is whether your top recruiters should be spending time on BD calls or on billable placements. We handle the BD so your recruiters stay focused on what they do best. Would you be opposed to 10 minutes?'},
+  {obj:'We tried a business development rep before and wasted money.',keys:['understand','different','structured','scripts','icp','accountability','proven','results'],perfect:'I completely understand — and unstructured BD reps are a common money pit. The difference with KolFil is we bring proven scripts, ICP targeting, and performance accountability built in. Would you be opposed to 10 minutes with Jan to see exactly what makes us different?'},
+  {obj:'Our buyers do not respond to cold calls.',keys:['understand','different','right person','icp','decision maker','procurement','proven','results'],perfect:'I hear you — and generic cold calls definitely do not work. What does work is reaching the right decision maker at exactly the right company with a highly specific message. Would you be opposed to 10 minutes with Jan to see how we approach your specific buyers?'},
+  {obj:'We sell at trade shows. That is how our industry works.',keys:['understand','complement','between shows','consistent','year round','pipeline','supplement','opposed'],perfect:'Completely understood — trade shows are powerful. The challenge is they are expensive, infrequent, and unpredictable. We create consistent pipeline between shows so you are not dependent on a few events per year. Would you be opposed to 10 minutes?'},
+  {obj:'Our product is too technical to explain in a cold call.',keys:['understand','not explain','introduce','qualified','meeting','jan','expert','15 minutes'],perfect:'I completely understand — we are not trying to explain your product on this call. Our job is simply to book a qualified meeting with a decision maker who has a relevant pain point. You do the explaining. We just get the right people in the room. Would you be opposed to 10 minutes?'},
+  {obj:'I am going to be honest with you. I hate cold callers.',keys:['appreciate','honest','different','27 seconds','fair','quick','listen','value'],perfect:'I completely appreciate your honesty — and I promise I am not like most cold callers. Can I have 27 seconds to share why I called you specifically? If it does not make sense I will let you go immediately. Fair?'},
+  {obj:'How did you get my number?',keys:['research','company','icp','specifically','targeted','not random','let me share','27 seconds'],perfect:'Great question — we researched your company specifically because you fit the exact profile of clients we have helped generate consistent pipeline. This was not a random call. Can I share the 27-second reason why I reached out to you specifically? Fair?'},
+  {obj:'We are about to be acquired. Now is really not a good time.',keys:['understand','congratulations','timing','after','placeholder','introduce','future','when'],perfect:'Wow — congratulations! I completely understand the timing. Would it be crazy to put a quick placeholder for after the acquisition closes? The new entity will likely need a proven outbound engine, and we would love to be the first call you make. Fair?'},
+  {obj:'We just went through layoffs. Definitely not the right time.',keys:['understand','sorry','timing','when ready','introduce','pipeline','right time','placeholder'],perfect:'I completely understand — and I am sorry to hear that. By no means were we expecting this to be a priority. Can I put a placeholder for 90 days from now so we are top of mind when things stabilize?'},
+  {obj:'Your company is too small for us to trust with our pipeline.',keys:['understand','fair','results','85','six figure','clients','jan','proven','15 minutes'],perfect:'That is a completely fair concern — and I appreciate you saying it directly. Last month we helped a client generate 85 thousand dollars in net new business and six figures in pipeline purely from outbound. I would love for Jan to share exactly how we deliver those results. Would you be opposed to 15 minutes?'},
+  {obj:'We just hired a VP of Sales. Let them settle in first.',keys:['understand','congratulations','introduce','new vp','tool','first win','pipeline','placeholder'],perfect:'That is great news! And honestly the best thing a new VP of Sales wants is a full pipeline fast. Would it be crazy to set up an introduction between Jan and your new VP? We could be their first quick win. Would you be opposed to 10 minutes?'},
+  {obj:'We are growing organically and it is working fine.',keys:['awesome','supplement','predictable','consistent','scale','demand','pipeline','opposed'],perfect:'That is fantastic — organic growth is the best kind. The challenge is it is hard to predict and hard to accelerate on demand. We create a consistent outbound pipeline so you can scale when you want to, not just when the market sends referrals. Would you be opposed to 10 minutes?'},
+  {obj:'I only work with vendors who were referred to me.',keys:['understand','appreciate','introduce','jan','reference','client','results','speak with'],perfect:'I completely respect that — and I appreciate your transparency. What I can do is connect you directly with Jan and one of our existing clients so you can get the referral-style validation before making any decision. Would you be open to that?'},
+  {obj:'We do not believe cold calling works anymore.',keys:['understand','data','results','85','six figure','icp','proven','qualified'],perfect:'I hear you — and most cold calling does not work. What does work is targeted outbound with the right script, the right ICP, and the right accountability. Last month we helped a client generate 85 thousand dollars in net new business purely from outbound. Would you be opposed to 10 minutes with Jan to see the proof?'},
+  {obj:'I already talked to someone from your company.',keys:['apologize','sorry','follow','make sure','right person','value','10 minutes','jan'],perfect:'I sincerely apologize for the duplicate outreach — that is on us. I just wanted to make sure the right person had a chance to connect with Jan directly. Would you be opposed to 10 minutes to make sure the conversation gets to the right decision maker?'}
+];
+
+
+function acceptTerms(){
+  var ov=document.getElementById('termsOv');
+  if(ov)ov.style.display='none';
+  try{localStorage.setItem('kolfil_beta_v1','1');}catch(e){}
+}
+window.addEventListener('DOMContentLoaded',function(){
+  try{
+    if(localStorage.getItem('kolfil_beta_v1')==='1'){
+      var ov=document.getElementById('termsOv');
+      if(ov)ov.style.display='none';
+    }
+  }catch(e){}
+});
+
+
+// ═══ FEEDBACK SYSTEM ═══
+var fbRating = 0;
+
+function openFeedback(){
+  fbRating = 0;
+  document.querySelectorAll('.fb-star').forEach(s=>s.classList.remove('on'));
+  var cm = document.getElementById('fbComment');
+  var nm = document.getElementById('fbName');
+  var bd = document.getElementById('fbBody');
+  var sc = document.getElementById('fbSuccess');
+  if(cm)cm.value='';
+  if(nm)nm.value='';
+  if(bd)bd.style.display='flex';
+  if(sc)sc.style.display='none';
+  document.getElementById('fbOverlay').classList.add('show');
+}
+
+function closeFeedback(){
+  document.getElementById('fbOverlay').classList.remove('show');
+}
+
+function setRating(n){
+  fbRating=n;
+  for(var i=1;i<=5;i++){
+    var s=document.getElementById('fs'+i);
+    if(s)s.classList.toggle('on',i<=n);
+  }
+}
+
+function submitFeedback(){
+  var comment=document.getElementById('fbComment').value.trim();
+  var name=document.getElementById('fbName').value.trim()||'Anonymous SDR';
+  if(!fbRating&&!comment){
+    document.getElementById('fbComment').focus();
+    document.getElementById('fbComment').style.borderColor='var(--red)';
+    setTimeout(()=>document.getElementById('fbComment').style.borderColor='',2000);
+    return;
+  }
+  // Build feedback data
+  var stars='⭐'.repeat(fbRating)||'No rating';
+  var callInfo='Calls: '+(session.calls||0)+' | Best: '+(session.best||0)+' | Drills: '+(session.drills||0);
+  var body=encodeURIComponent(
+    'Rating: '+stars+'\n'+
+    'From: '+name+'\n'+
+    'Feedback: '+(comment||'No comment')+'\n'+
+    'Session: '+callInfo+'\n'+
+    'Simulator: KolFil Cold Call Simulator Beta v1.0'
+  );
+  var subject=encodeURIComponent('KolFil Simulator Feedback — '+stars+' from '+name);
+  // Open email — replace with your email address
+  window.open('mailto:jonel.buenaventura01@gmail.com?subject='+subject+'&body='+body);
+  // Show success
+  document.getElementById('fbBody').style.display='none';
+  document.getElementById('fbSuccess').style.display='block';
+}
+
+// Close on overlay click
+document.addEventListener('click',function(e){
+  if(e.target===document.getElementById('fbOverlay'))closeFeedback();
+});
+
+</script>
+
+<!-- WATERMARK -->
+<div class="wm">Built by Never Ending Learning · © 2026 KolFil LLC · kolfil.com</div>
+
+<!-- TERMS & ONBOARDING -->
+<div class="terms-ov" id="termsOv">
+<div class="terms-box">
+  <div class="t-hdr">
+    <div class="t-logo">KF</div>
+    <div class="t-title">KolFil Cold Call Simulator</div>
+    <div class="t-sub">Beta v1.0 · © 2026 KolFil LLC</div>
+    <div style="font-size:11px;color:var(--purple);font-weight:700;margin-top:3px;">Built by Never Ending Learning</div>
+    <div class="t-steps">
+      <div class="t-step"><div class="t-sn">1</div><div class="t-st">Review Lead Card</div></div>
+      <div class="t-step"><div class="t-sn">2</div><div class="t-st">Run the Call</div></div>
+      <div class="t-step"><div class="t-sn">3</div><div class="t-st">Book Calendar</div></div>
+      <div class="t-step"><div class="t-sn">4</div><div class="t-st">Get QA Score</div></div>
+    </div>
+  </div>
+  <div class="t-body">
+    <div class="t-item"><span>🔒</span><span>This simulator is <strong style="color:var(--text)">proprietary and confidential</strong> — built exclusively for KolFil internal SDR training. Unauthorized distribution is prohibited.</span></div>
+    <div class="t-item"><span>🃏</span><span><strong style="color:var(--text)">Lead Card:</strong> Review the prospect profile before every dial — name, email, phone, pain point. Know them before you call.</span></div>
+    <div class="t-item"><span>🎤</span><span><strong style="color:var(--text)">Voice Mode:</strong> Tap mic to speak · tap again when done · prospect responds automatically.</span></div>
+    <div class="t-item"><span>🖥️</span><span><strong style="color:var(--text)">Screen Sharing:</strong> Share your <strong style="color:var(--gold)">browser TAB</strong> (not whole screen) and tick <strong style="color:var(--gold)">"Share Tab Audio"</strong> so trainers and teammates hear the AI prospect too.</span></div>
+    <div class="t-item"><span>📅</span><span><strong style="color:var(--text)">Calendar:</strong> Appears in chat when prospect agrees to meet. Book the slot, confirm email, then deliver your closing spiel.</span></div>
+    <div class="t-item"><span>⚡</span><span><strong style="color:var(--text)">Objection Drills:</strong> 40 objections · prospect reads it aloud · you respond · get scored with KolFil perfect response.</span></div>
+    <div class="t-item"><span>🏆</span><span>Target <strong style="color:var(--gold)">85+ / 100</strong> on every call. That is your green light for live dials.</span></div>
+  </div>
+  <div class="t-foot">
+    <button class="t-btn" onclick="acceptTerms()">Let us Train! 🔥</button>
+    <div class="t-copy">Built by Never Ending Learning · © 2026 KolFil LLC · kolfil.com</div>
+  </div>
+</div>
+</div>
+
+
+<!-- FEEDBACK FLOAT BUTTON -->
+<div class="fb-float">
+  <button class="fb-btn" onclick="openFeedback()" title="Send Feedback">💬</button>
+</div>
+
+<!-- FEEDBACK MODAL -->
+<div class="fb-overlay" id="fbOverlay">
+<div class="fb-box">
+  <div class="fb-hdr">
+    <div class="fb-title">💬 Share Your Feedback</div>
+    <div class="fb-sub">Help us improve the simulator · Takes 30 seconds</div>
+  </div>
+  <div class="fb-body" id="fbBody">
+    <div>
+      <div class="fb-lbl">How would you rate this simulator?</div>
+      <div class="fb-stars">
+        <span class="fb-star" onclick="setRating(1)" id="fs1">⭐</span>
+        <span class="fb-star" onclick="setRating(2)" id="fs2">⭐</span>
+        <span class="fb-star" onclick="setRating(3)" id="fs3">⭐</span>
+        <span class="fb-star" onclick="setRating(4)" id="fs4">⭐</span>
+        <span class="fb-star" onclick="setRating(5)" id="fs5">⭐</span>
+      </div>
+    </div>
+    <div>
+      <div class="fb-lbl">What would you improve or add?</div>
+      <textarea class="fb-inp" id="fbComment" placeholder="Tell us what you love, what to fix, what to add..."></textarea>
+    </div>
+    <div>
+      <div class="fb-lbl">Your name (optional)</div>
+      <input class="fb-name" id="fbName" type="text" placeholder="e.g. SDR Team Member"/>
+    </div>
+    <button class="fb-submit" onclick="submitFeedback()">Send Feedback 🚀</button>
+    <button class="fb-cancel" onclick="closeFeedback()">Maybe later</button>
+  </div>
+  <div style="display:none;" id="fbSuccess" class="fb-success">
+    <div class="fb-success-ico">🙏</div>
+    <div class="fb-success-title">Thank you!</div>
+    <div class="fb-success-sub">Your feedback helps us build the best cold call training tool on the planet.</div>
+    <button class="fb-done-btn" onclick="closeFeedback()">Close</button>
+  </div>
+</div>
+</div>
+
+</body>
+</html>

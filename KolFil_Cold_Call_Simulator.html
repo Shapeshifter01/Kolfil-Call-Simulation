@@ -1212,7 +1212,6 @@ function initVoice(){
       vFemale=vs.find(v=>/samantha/i.test(v.name))||
               vs.find(v=>/google us english(?! male)/i.test(v.name))||
               vs.find(v=>/victoria/i.test(v.name))||
-              vs.find(v=>/victoria/i.test(v.name))||
               vs.find(v=>/female/i.test(v.name)&&v.lang.startsWith('en'))||vMale;
     }
     // Ultimate fallbacks
@@ -2119,7 +2118,7 @@ function showDrillDone(){
     pct>=50?'💪 Good progress! Listen to each perfect response carefully and drill again. Target 35+.':
     '🎯 Keep going! Every rep makes you sharper. Focus on the 3-pillar structure: Acknowledge → Redirect → Ask.';
   if(synth)synth.cancel();
-  document.getElementById('dpScore').textContent=`Final: ${drillCorrect} / ${DRILLS.length}`;
+  document.getElementById('dpScore').textContent=`Final: ${drillCorrect} / ${total}`;
   document.getElementById('dpBar').style.width='100%';
 }
 
@@ -2255,17 +2254,17 @@ function renderCalendar() {
     dayEl.textContent = d;
     if(!isPast && !isWeekend) {
       (function(day, date) {
-        dayEl.onclick = function() { selectCalDay(day, date); };
+        dayEl.onclick = function(e) { selectCalDay(day, date, e); };
       })(d, thisDate);
     }
     grid.appendChild(dayEl);
   }
 }
 
-function selectCalDay(day, date) {
+function selectCalDay(day, date, e) {
   calSelectedDay = date; calSelectedTime = null;
   document.querySelectorAll('.cal-day').forEach(function(d){ d.classList.remove('selected'); });
-  event.target.classList.add('selected');
+  if(e && e.target) e.target.classList.add('selected');
   var sw = document.getElementById('calSlotsWrap');
   var cw = document.getElementById('calConfirmWrap');
   if(sw) sw.style.display = '';
